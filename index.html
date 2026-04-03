@@ -11,14 +11,13 @@
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
         body { font-family: 'Inter', sans-serif; }
         .animate-in { animation: fadeIn 0.3s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -28,24 +27,31 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect } = React;
+        const { useState, useEffect, useMemo } = React;
 
         // --- CONFIGURACIÓN DE FIREBASE ---
-        // Estas variables se llenan automáticamente en este entorno. 
-        // Si lo usas fuera, recuerda reemplazar __firebase_config con tu objeto de configuración.
-        const firebaseConfig = {
-  apiKey: "AIzaSyDIp95fqGFn2mgJ_031a1Y_JfeKECKZTOk",
-  authDomain: "potabilizadora-65aeb.firebaseapp.com",
-  projectId: "potabilizadora-65aeb",
-  storageBucket: "potabilizadora-65aeb.firebasestorage.app",
-  messagingSenderId: "503467709475",
-  appId: "1:503467709475:web:dcad5aa24d0bf9d23acd96",
-  measurementId: "G-E3TE034RV5"
-};
-        // Componente de Icono para simplificar Lucide en React
+        const firebaseConfig = JSON.parse(__firebase_config);
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'potabilizadora-app-v1';
+
+        // Componente de Iconos SVG para evitar errores de Lucide/React
         const Icon = ({ name, size = 20, className = "" }) => {
-            useEffect(() => { lucide.createIcons(); }, [name]);
-            return <i data-lucide={name} className={className} style={{ width: size, height: size }}></i>;
+            const icons = {
+                droplets: <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M7 16.3c2.2 0 4-1.8 4-4s-1.8-4-4-4-4 1.8-4 4 1.8 4 4 4Z"/><path d="M17 16.3c2.2 0 4-1.8 4-4s-1.8-4-4-4-4 1.8-4 4 1.8 4 4 4Z"/><path d="M12 7V3"/><path d="M12 21v-2"/></svg>,
+                loader: <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`${className} animate-spin`}><path d="M12 2v4"/><path d="m16.2 7.8 2.9-2.9"/><path d="M18 12h4"/><path d="m16.2 16.2 2.9 2.9"/><path d="M12 18v4"/><path d="m4.9 19.1 2.9-2.9"/><path d="M2 12h4"/><path d="m4.9 4.9 2.9 2.9"/></svg>,
+                dashboard: <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>,
+                plus: <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"/><path d="M12 8v8"/><path d="M8 12h8"/></svg>,
+                logout: <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>,
+                printer: <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>,
+                trend: <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>,
+                truck: <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M10 17h4V5H2v12h3"/><circle cx="7" cy="17" r="2"/><path d="M15 17h5l3-3v-7h-8v10Z"/><circle cx="18" cy="17" r="2"/></svg>,
+                shield: <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/></svg>
+            };
+            return icons[name] || null;
         };
 
         const App = () => {
@@ -69,17 +75,18 @@
             useEffect(() => {
                 const initAuth = async () => {
                     try {
-                        await auth.signInAnonymously();
+                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                            await auth.signInWithCustomToken(__initial_auth_token);
+                        } else {
+                            await auth.signInAnonymously();
+                        }
                     } catch (err) {
-                        console.error("Error de auth:", err);
+                        console.error("Auth error:", err);
+                    } finally {
+                        setLoading(false);
                     }
                 };
                 initAuth();
-
-                const unsubscribe = auth.onAuthStateChanged((firebaseUser) => {
-                    setLoading(false);
-                });
-                return () => unsubscribe();
             }, []);
 
             useEffect(() => {
@@ -95,11 +102,11 @@
                     const sorted = data.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
                     setRecords(sorted);
                 }, (error) => {
-                    console.error("Error leyendo Firestore:", error);
+                    console.error("Firestore read error:", error);
                 });
 
                 return () => unsubscribe();
-            }, [loading]);
+            }, [auth.currentUser]);
 
             const handleLogin = (e) => {
                 e.preventDefault();
@@ -116,6 +123,8 @@
 
             const handleSubmitRecord = async (e) => {
                 e.preventDefault();
+                if (!auth.currentUser) return;
+                
                 try {
                     const recordsRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('operaciones');
                     await recordsRef.add({
@@ -127,26 +136,38 @@
                     setFormData({ type: 'venta', category: 'garrafon', customer: '', quantity: '', amount: '', ph: '7.0', tds: '', description: '' });
                     setView(user.role === 'admin' ? 'admin' : 'dashboard');
                 } catch (err) {
-                    console.error("Error guardando:", err);
+                    console.error("Save error:", err);
                 }
             };
 
-            if (loading) return <div className="min-h-screen flex items-center justify-center"><Icon name="loader-2" className="animate-spin text-blue-600" size={40} /></div>;
+            if (loading) return (
+                <div className="min-h-screen flex items-center justify-center bg-slate-50">
+                    <Icon name="loader" size={48} className="text-blue-600" />
+                </div>
+            );
 
             if (!user) {
                 return (
-                    <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
+                    <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4 animate-in">
                         <div className="max-w-md w-full bg-white rounded-[2rem] shadow-2xl p-10">
                             <div className="flex flex-col items-center mb-8">
-                                <div className="bg-blue-600 p-4 rounded-2xl mb-4"><Icon name="droplets" className="text-white" size={32} /></div>
-                                <h1 className="text-2xl font-black">Acceso Cloud</h1>
-                                <p className="text-slate-400 text-sm">Gestión de Potabilizadora</p>
+                                <div className="bg-blue-600 p-4 rounded-2xl mb-4 shadow-lg shadow-blue-200">
+                                    <Icon name="droplets" size={32} className="text-white" />
+                                </div>
+                                <h1 className="text-2xl font-black text-slate-800 tracking-tight">Acceso Cloud</h1>
+                                <p className="text-slate-400 text-sm font-medium">Gestión de Potabilizadora</p>
                             </div>
                             <form onSubmit={handleLogin} className="space-y-4">
-                                <input type="text" className="w-full px-6 py-4 bg-slate-50 rounded-xl outline-none focus:ring-2 ring-blue-500 transition" placeholder="Usuario" value={authForm.username} onChange={e => setAuthForm({...authForm, username: e.target.value})} />
-                                <input type="password" className="w-full px-6 py-4 bg-slate-50 rounded-xl outline-none focus:ring-2 ring-blue-500 transition" placeholder="Contraseña" value={authForm.password} onChange={e => setAuthForm({...authForm, password: e.target.value})} />
-                                {loginError && <p className="text-red-500 text-xs font-bold">{loginError}</p>}
-                                <button className="w-full bg-blue-600 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-blue-700 transition active:scale-95 uppercase tracking-wider">Entrar</button>
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase ml-2 tracking-widest">Usuario</label>
+                                    <input type="text" className="w-full px-6 py-4 bg-slate-50 border-2 border-transparent rounded-xl outline-none focus:border-blue-500 transition font-semibold" placeholder="admin / empleado1" value={authForm.username} onChange={e => setAuthForm({...authForm, username: e.target.value})} />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase ml-2 tracking-widest">Contraseña</label>
+                                    <input type="password" className="w-full px-6 py-4 bg-slate-50 border-2 border-transparent rounded-xl outline-none focus:border-blue-500 transition font-semibold" placeholder="••••••••" value={authForm.password} onChange={e => setAuthForm({...authForm, password: e.target.value})} />
+                                </div>
+                                {loginError && <p className="text-red-500 text-xs font-bold px-2">{loginError}</p>}
+                                <button className="w-full bg-blue-600 text-white font-black py-4 rounded-xl shadow-xl shadow-blue-100 hover:bg-blue-700 transition active:scale-95 uppercase tracking-widest mt-4">Iniciar Sesión</button>
                             </form>
                         </div>
                     </div>
@@ -154,121 +175,166 @@
             }
 
             return (
-                <div className="min-h-screen flex flex-col md:flex-row">
+                <div className="min-h-screen flex flex-col md:flex-row bg-slate-50">
                     {/* Sidebar */}
-                    <nav className="w-full md:w-64 bg-slate-900 text-white p-6 flex flex-col">
+                    <nav className="w-full md:w-64 bg-slate-900 text-white p-6 flex flex-col shadow-xl z-10">
                         <div className="flex items-center gap-3 mb-10">
                             <Icon name="droplets" className="text-blue-400" />
-                            <span className="font-black text-xl">AQUA CLOUD</span>
+                            <span className="font-black text-xl tracking-tighter uppercase">Aqua <span className="text-blue-400">Cloud</span></span>
                         </div>
                         <div className="flex-1 space-y-2">
-                            <button onClick={() => setView(user.role === 'admin' ? 'admin' : 'dashboard')} className={`w-full flex items-center gap-3 p-4 rounded-xl transition ${view !== 'register' ? 'bg-blue-600' : 'hover:bg-slate-800 text-slate-400'}`}><Icon name="layout-dashboard" /> Dashboard</button>
-                            <button onClick={() => setView('register')} className={`w-full flex items-center gap-3 p-4 rounded-xl transition ${view === 'register' ? 'bg-blue-600' : 'hover:bg-slate-800 text-slate-400'}`}><Icon name="plus-circle" /> Nuevo Registro</button>
+                            <button onClick={() => setView(user.role === 'admin' ? 'admin' : 'dashboard')} className={`w-full flex items-center gap-3 p-4 rounded-xl transition font-bold text-sm ${view !== 'register' ? 'bg-blue-600 shadow-lg' : 'hover:bg-slate-800 text-slate-400'}`}>
+                                <Icon name="dashboard" /> Panel Principal
+                            </button>
+                            <button onClick={() => setView('register')} className={`w-full flex items-center gap-3 p-4 rounded-xl transition font-bold text-sm ${view === 'register' ? 'bg-blue-600 shadow-lg' : 'hover:bg-slate-800 text-slate-400'}`}>
+                                <Icon name="plus" /> Nuevo Registro
+                            </button>
                         </div>
-                        <div className="mt-auto pt-4 border-t border-slate-800">
-                            <p className="text-xs text-slate-500 uppercase font-bold mb-1">Usuario</p>
-                            <p className="font-bold text-blue-400 mb-4">{user.name}</p>
-                            <button onClick={() => setUser(null)} className="w-full flex items-center gap-3 p-3 text-red-400 hover:bg-red-500/10 rounded-xl transition"><Icon name="log-out" /> Salir</button>
+                        <div className="mt-auto pt-6 border-t border-slate-800">
+                            <p className="text-[10px] text-slate-500 uppercase font-black mb-2 tracking-widest">Usuario Activo</p>
+                            <p className="font-black text-blue-400 mb-6 truncate">{user.name}</p>
+                            <button onClick={() => setUser(null)} className="w-full flex items-center gap-3 p-4 text-red-400 hover:bg-red-500/10 rounded-xl transition font-black text-xs uppercase tracking-widest">
+                                <Icon name="logout" size={18} /> Cerrar Sesión
+                            </button>
                         </div>
                     </nav>
 
                     {/* Content */}
                     <main className="flex-1 p-6 md:p-10 overflow-y-auto">
                         {view === 'register' ? (
-                            <div className="max-w-xl mx-auto bg-white rounded-[2rem] shadow-xl overflow-hidden animate-in">
+                            <div className="max-w-xl mx-auto bg-white rounded-[2.5rem] shadow-2xl overflow-hidden animate-in">
                                 <div className="bg-blue-600 p-8 text-white">
-                                    <h2 className="text-2xl font-black">Nuevo Registro</h2>
-                                    <p className="text-blue-100 text-sm opacity-80 uppercase tracking-widest font-bold">Captura de Operación</p>
+                                    <h2 className="text-2xl font-black tracking-tight">Registro de Operación</h2>
+                                    <p className="text-blue-100 text-[10px] opacity-80 uppercase tracking-widest font-black mt-1">Sincronizado con base de datos</p>
                                 </div>
                                 <form onSubmit={handleSubmitRecord} className="p-8 space-y-6">
                                     <div className="grid grid-cols-2 gap-4">
-                                        <select className="p-4 bg-slate-50 rounded-xl font-bold outline-none border-2 border-transparent focus:border-blue-500" value={formData.type} onChange={e => setFormData({...formData, type: e.target.value})}>
-                                            <option value="venta">Venta</option>
-                                            <option value="calidad">Calidad</option>
-                                        </select>
-                                        {formData.type === 'venta' && (
-                                            <select className="p-4 bg-slate-50 rounded-xl font-bold outline-none border-2 border-transparent focus:border-blue-500" value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})}>
-                                                <option value="garrafon">Garrafón</option>
-                                                <option value="cisterna">Cisterna</option>
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Tipo de Entrada</label>
+                                            <select className="w-full p-4 bg-slate-50 rounded-xl font-bold outline-none border-2 border-transparent focus:border-blue-500 appearance-none" value={formData.type} onChange={e => setFormData({...formData, type: e.target.value})}>
+                                                <option value="venta">Venta</option>
+                                                <option value="calidad">Calidad</option>
                                             </select>
+                                        </div>
+                                        {formData.type === 'venta' && (
+                                            <div className="space-y-1">
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Categoría</label>
+                                                <select className="w-full p-4 bg-slate-50 rounded-xl font-bold outline-none border-2 border-transparent focus:border-blue-500 appearance-none" value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})}>
+                                                    <option value="garrafon">Garrafón</option>
+                                                    <option value="cisterna">Cisterna</option>
+                                                </select>
+                                            </div>
                                         )}
                                     </div>
                                     {formData.type === 'venta' ? (
-                                        <div className="space-y-4">
-                                            <input type="text" required className="w-full p-4 bg-slate-50 rounded-xl font-bold outline-none" placeholder="Nombre del Cliente" value={formData.customer} onChange={e => setFormData({...formData, customer: e.target.value})} />
+                                        <div className="space-y-6">
+                                            <div className="space-y-1">
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Cliente</label>
+                                                <input type="text" required className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-xl font-bold outline-none focus:border-blue-500" placeholder="Nombre o ID del cliente" value={formData.customer} onChange={e => setFormData({...formData, customer: e.target.value})} />
+                                            </div>
                                             <div className="grid grid-cols-2 gap-4">
-                                                <input type="number" required className="p-4 bg-slate-50 rounded-xl font-bold outline-none" placeholder="Cantidad" value={formData.quantity} onChange={e => setFormData({...formData, quantity: e.target.value})} />
-                                                <input type="number" step="0.01" required className="p-4 bg-blue-50 text-blue-600 rounded-xl font-black outline-none" placeholder="Monto $" value={formData.amount} onChange={e => setFormData({...formData, amount: e.target.value})} />
+                                                <div className="space-y-1">
+                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Cantidad</label>
+                                                    <input type="number" required className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-xl font-bold outline-none focus:border-blue-500" placeholder="Unidades" value={formData.quantity} onChange={e => setFormData({...formData, quantity: e.target.value})} />
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Monto Total</label>
+                                                    <input type="number" step="0.01" required className="w-full p-4 bg-blue-50 border-2 border-transparent text-blue-600 rounded-xl font-black outline-none focus:border-blue-600" placeholder="$ 0.00" value={formData.amount} onChange={e => setFormData({...formData, amount: e.target.value})} />
+                                                </div>
                                             </div>
                                         </div>
                                     ) : (
                                         <div className="grid grid-cols-2 gap-4">
-                                            <input type="number" step="0.1" className="p-4 bg-slate-50 rounded-xl font-bold outline-none" placeholder="pH (Ej: 7.2)" value={formData.ph} onChange={e => setFormData({...formData, ph: e.target.value})} />
-                                            <input type="number" className="p-4 bg-slate-50 rounded-xl font-bold outline-none" placeholder="TDS (PPM)" value={formData.tds} onChange={e => setFormData({...formData, tds: e.target.value})} />
+                                            <div className="space-y-1">
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nivel de pH</label>
+                                                <input type="number" step="0.1" className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-xl font-bold outline-none focus:border-blue-500" placeholder="Ej: 7.2" value={formData.ph} onChange={e => setFormData({...formData, ph: e.target.value})} />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">TDS (PPM)</label>
+                                                <input type="number" className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-xl font-bold outline-none focus:border-blue-500" placeholder="Ej: 150" value={formData.tds} onChange={e => setFormData({...formData, tds: e.target.value})} />
+                                            </div>
                                         </div>
                                     )}
-                                    <div className="flex gap-4 pt-4">
-                                        <button type="button" onClick={() => setView(user.role === 'admin' ? 'admin' : 'dashboard')} className="flex-1 p-4 border-2 border-slate-100 rounded-xl font-bold text-slate-400 hover:bg-slate-50">Cancelar</button>
-                                        <button className="flex-[2] p-4 bg-blue-600 text-white rounded-xl font-black shadow-lg shadow-blue-200">GUARDAR EN NUBE</button>
+                                    <div className="flex flex-col sm:flex-row gap-4 pt-4">
+                                        <button type="button" onClick={() => setView(user.role === 'admin' ? 'admin' : 'dashboard')} className="flex-1 p-5 border-2 border-slate-100 rounded-2xl font-black text-slate-400 hover:bg-slate-50 transition uppercase tracking-widest text-xs">Cancelar</button>
+                                        <button className="flex-[2] p-5 bg-blue-600 text-white rounded-2xl font-black shadow-xl shadow-blue-100 hover:bg-blue-700 transition uppercase tracking-widest text-xs">Guardar en Nube</button>
                                     </div>
                                 </form>
                             </div>
                         ) : (
                             <div className="space-y-8 animate-in">
-                                <header className="flex justify-between items-end">
+                                <header className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
                                     <div>
-                                        <h2 className="text-3xl font-black text-slate-800">Panel Operativo</h2>
-                                        <p className="text-slate-400 font-medium">Sincronización en tiempo real activa</p>
+                                        <h2 className="text-4xl font-black text-slate-900 tracking-tighter">Panel Principal</h2>
+                                        <p className="text-slate-400 font-bold italic">Base de datos en tiempo real activa</p>
                                     </div>
                                     {user.role === 'admin' && (
-                                        <button onClick={() => window.print()} className="flex items-center gap-2 bg-slate-900 text-white px-6 py-3 rounded-xl font-bold text-sm"><Icon name="printer" size={16} /> Imprimir</button>
+                                        <button onClick={() => window.print()} className="flex items-center gap-3 bg-slate-900 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-800 transition shadow-xl">
+                                            <Icon name="printer" size={18} /> Generar Reporte
+                                        </button>
                                     )}
                                 </header>
 
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                    <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
-                                        <Icon name="trending-up" className="text-green-500 mb-2" />
-                                        <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Hoy</p>
-                                        <p className="text-2xl font-black text-slate-900">${records.filter(r => r.type === 'venta').reduce((acc, curr) => acc + Number(curr.amount || 0), 0).toFixed(2)}</p>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100">
+                                        <Icon name="trend" size={32} className="text-green-500 mb-4" />
+                                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Recaudación Hoy</p>
+                                        <p className="text-3xl font-black text-slate-900 mt-1">${records.filter(r => r.type === 'venta').reduce((acc, curr) => acc + Number(curr.amount || 0), 0).toFixed(2)}</p>
                                     </div>
-                                    <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
-                                        <Icon name="truck" className="text-blue-500 mb-2" />
-                                        <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Operaciones</p>
-                                        <p className="text-2xl font-black text-slate-900">{records.length}</p>
+                                    <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100">
+                                        <Icon name="truck" size={32} className="text-blue-500 mb-4" />
+                                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Total Servicios</p>
+                                        <p className="text-3xl font-black text-slate-900 mt-1">{records.length}</p>
                                     </div>
-                                    <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
-                                        <Icon name="shield-check" className="text-purple-500 mb-2" />
-                                        <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Nube</p>
-                                        <p className="text-xl font-black text-green-500 uppercase">Conectado</p>
+                                    <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100">
+                                        <Icon name="shield" size={32} className="text-purple-500 mb-4" />
+                                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Conexión Cloud</p>
+                                        <p className="text-2xl font-black text-green-500 mt-1 uppercase tracking-tighter">En Línea</p>
                                     </div>
                                 </div>
 
-                                <div className="bg-white rounded-3xl shadow-xl overflow-hidden border border-slate-100">
-                                    <table className="w-full text-left">
-                                        <thead className="bg-slate-50 text-[10px] uppercase font-black text-slate-400 tracking-widest">
-                                            <tr>
-                                                <th className="px-6 py-4">Fecha/Hora</th>
-                                                <th className="px-6 py-4">Tipo</th>
-                                                <th className="px-6 py-4">Detalle</th>
-                                                <th className="px-6 py-4 text-right">Monto</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-slate-100">
-                                            {records.map(r => (
-                                                <tr key={r.id} className="hover:bg-slate-50 transition">
-                                                    <td className="px-6 py-4 text-xs font-mono text-slate-400">{r.timestampStr || 'Reciente...'}</td>
-                                                    <td className="px-6 py-4">
-                                                        <span className={`px-2 py-1 rounded-md text-[10px] font-bold uppercase ${r.type === 'venta' ? 'bg-blue-100 text-blue-600' : 'bg-purple-100 text-purple-600'}`}>{r.type}</span>
-                                                    </td>
-                                                    <td className="px-6 py-4">
-                                                        <p className="font-bold text-slate-700">{r.customer || 'Análisis de Planta'}</p>
-                                                        <p className="text-[10px] text-slate-400">{r.category || 'Técnico'}</p>
-                                                    </td>
-                                                    <td className="px-6 py-4 text-right font-black text-slate-900">${r.amount || '0.00'}</td>
+                                <div className="bg-white rounded-[2.5rem] shadow-2xl overflow-hidden border border-slate-100">
+                                    <div className="p-8 border-b bg-slate-50/50 flex justify-between items-center">
+                                        <h3 className="font-black text-slate-800 uppercase tracking-widest text-xs">Historial Reciente</h3>
+                                        <span className="bg-blue-100 text-blue-600 px-3 py-1 rounded-full text-[10px] font-black uppercase">Actualizado</span>
+                                    </div>
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-left">
+                                            <thead className="bg-slate-50 text-[10px] uppercase font-black text-slate-400 tracking-widest">
+                                                <tr>
+                                                    <th className="px-8 py-6">Fecha y Hora</th>
+                                                    <th className="px-8 py-6">Operación</th>
+                                                    <th className="px-8 py-6">Cliente / Detalle</th>
+                                                    <th className="px-8 py-6 text-right">Monto Final</th>
                                                 </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-50">
+                                                {records.length === 0 ? (
+                                                    <tr>
+                                                        <td colSpan="4" className="px-8 py-20 text-center text-slate-300 font-bold italic">No hay registros guardados aún.</td>
+                                                    </tr>
+                                                ) : (
+                                                    records.map(r => (
+                                                        <tr key={r.id} className="hover:bg-blue-50/30 transition group">
+                                                            <td className="px-8 py-6 text-[10px] font-black font-mono text-slate-400 uppercase">{r.timestampStr || 'Registrando...'}</td>
+                                                            <td className="px-8 py-6">
+                                                                <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase ${r.type === 'venta' ? 'bg-blue-100 text-blue-600' : 'bg-purple-100 text-purple-600'}`}>
+                                                                    {r.type}
+                                                                </span>
+                                                            </td>
+                                                            <td className="px-8 py-6">
+                                                                <p className="font-black text-slate-700 tracking-tight">{r.customer || 'Análisis de Planta'}</p>
+                                                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{r.category || 'Técnico'}</p>
+                                                            </td>
+                                                            <td className="px-8 py-6 text-right">
+                                                                <span className="font-black text-slate-900 text-xl tracking-tighter">${Number(r.amount || 0).toFixed(2)}</span>
+                                                            </td>
+                                                        </tr>
+                                                    ))
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 </div>
                             </div>
                         )}
