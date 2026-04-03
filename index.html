@@ -25,6 +25,17 @@
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
+
+    <link rel="manifest" href="manifest.json">
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js')
+        .then(reg => console.log('App lista para instalar'))
+        .catch(err => console.log('Error al registrar', err));
+    });
+  }
+</script>
 </head>
 <body class="bg-slate-50">
     <div id="root"></div>
