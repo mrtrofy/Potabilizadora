@@ -120,24 +120,34 @@
             }, []);
 
             // Escucha de datos en tiempo real
+// Escucha de datos en tiempo real CORREGIDO
             useEffect(() => {
-                if (!db || !auth?.currentUser) return;
+                if (!db) return; // Eliminamos la dependencia de auth?.currentUser para que cargue siempre
 
                 const recordsRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('operaciones');
                 
                 const unsubscribe = recordsRef.onSnapshot((snapshot) => {
+                    if (snapshot.empty) {
+                        setRecords([]);
+                        return;
+                    }
                     const data = snapshot.docs.map(doc => ({
                         id: doc.id,
                         ...doc.data()
                     }));
-                    const sorted = data.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+                    // Ordenamos manualmente por fecha para evitar errores de índices en Firebase
+                    const sorted = data.sort((a, b) => {
+                        const dateA = a.createdAt?.seconds || 0;
+                        const dateB = b.createdAt?.seconds || 0;
+                        return dateB - dateA;
+                    });
                     setRecords(sorted);
                 }, (error) => {
                     console.error("Firestore read error:", error);
                 });
 
                 return () => unsubscribe();
-            }, [user]);
+            }, [db, appId]); // Cambiamos la dependencia de [user] por [db, appId]
 
             const handleLogin = (e) => {
                 e.preventDefault();
