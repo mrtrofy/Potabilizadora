@@ -60,7 +60,43 @@
         }
         
         const auth = firebase.apps.length ? firebase.auth() : null;
-        const db = firebase.apps.length ? firebase.firestore() : null;
+       // --- SUSTITUYE ESTE BLOQUE ---
+const db = firebase.firestore();
+
+// Esta es la ruta exacta que muestra tu captura de pantalla
+const collectionPath = db.collection('artifacts')
+                         .doc('potabilizadora-app-v1')
+                         .collection('public')
+                         .doc('data')
+                         .collection('operaciones');
+
+// --- ASEGÚRATE DE QUE EL USEEFFECT USE 'collectionPath' ---
+useEffect(() => {
+    if (!user) return;
+    const unsubscribe = collectionPath.onSnapshot((snapshot) => {
+        const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const sorted = data.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+        setRecords(sorted);
+    }, (err) => console.error("Error en ruta:", err));
+    return () => unsubscribe();
+}, [user]);
+
+// --- Y EL SUBMIT TAMBIÉN ---
+const handleSubmitRecord = async (e) => {
+    e.preventDefault();
+    try {
+        await collectionPath.add({
+            ...formData,
+            amount: Number(formData.amount),
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            timestampStr: new Date().toLocaleString(),
+            createdBy: user.name
+        });
+        setView('dashboard');
+    } catch (err) {
+        console.error(err);
+    }
+};
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'potabilizadora-app-v1';
 
         // Componente de Iconos SVG
