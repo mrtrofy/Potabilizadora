@@ -60,43 +60,7 @@
         }
         
         const auth = firebase.apps.length ? firebase.auth() : null;
-       // --- SUSTITUYE ESTE BLOQUE ---
-const db = firebase.firestore();
-
-// Esta es la ruta exacta que muestra tu captura de pantalla
-const collectionPath = db.collection('artifacts')
-                         .doc('potabilizadora-app-v1')
-                         .collection('public')
-                         .doc('data')
-                         .collection('operaciones');
-
-// --- ASEGÚRATE DE QUE EL USEEFFECT USE 'collectionPath' ---
-useEffect(() => {
-    if (!user) return;
-    const unsubscribe = collectionPath.onSnapshot((snapshot) => {
-        const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        const sorted = data.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
-        setRecords(sorted);
-    }, (err) => console.error("Error en ruta:", err));
-    return () => unsubscribe();
-}, [user]);
-
-// --- Y EL SUBMIT TAMBIÉN ---
-const handleSubmitRecord = async (e) => {
-    e.preventDefault();
-    try {
-        await collectionPath.add({
-            ...formData,
-            amount: Number(formData.amount),
-            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-            timestampStr: new Date().toLocaleString(),
-            createdBy: user.name
-        });
-        setView('dashboard');
-    } catch (err) {
-        console.error(err);
-    }
-};
+        const db = firebase.apps.length ? firebase.firestore() : null;
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'potabilizadora-app-v1';
 
         // Componente de Iconos SVG
@@ -397,41 +361,45 @@ const handleSubmitRecord = async (e) => {
                                                     <th className="px-10 py-6 text-right">Monto</th>
                                                 </tr>
                                             </thead>
-                                            
-
-<tbody className="divide-y divide-slate-50">
-    {records.length === 0 ? (
-        <tr>
-            <td colSpan="4" className="p-24 text-center text-slate-300 font-bold italic">
-                Esperando registros en la ruta correcta...
-            </td>
-        </tr>
-    ) : (
-        records.map(r => (
-            <tr key={r.id} className="hover:bg-blue-50/50 transition">
-                {/* 1. Fecha (usa timestampStr o el ID si no hay fecha) */}
-                <td className="px-6 py-4 text-xs text-slate-400 font-bold">
-                    {r.timestampStr || "Reciente"}
-                </td>
-                
-                {/* 2. Operación (ajusta según el campo que tengas en Firebase, ej: type) */}
-                <td className="px-6 py-4 font-bold text-slate-700">
-                    {r.type || "Venta"} 
-                </td>
-
-                {/* 3. Detalle / Cliente (usa el campo 'customer' que es el que tienes) */}
-                <td className="px-6 py-4 text-slate-600">
-                    {r.customer || "Sin nombre"}
-                </td>
-
-                {/* 4. Monto (usa el campo 'amount') */}
-                <td className="px-6 py-4 text-right font-black text-blue-600">
-                    ${Number(r.amount || 0).toFixed(2)}
-                </td>
-            </tr>
-        ))
-    )}
-</tbody>
+                                            <tbody className="divide-y divide-slate-50">
+                                                {records.length === 0 ? (
+                                                    <tr>
+                                                        <td colSpan="4" className="px-10 py-24 text-center">
+                                                            <div className="flex flex-col items-center text-slate-300">
+                                                                <Icon name="droplets" size={48} className="mb-4 opacity-20" />
+                                                                <p className="font-bold italic">Esperando primeros registros...</p>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ) : (
+                                                    records.map(r => (
+                                                        <tr key={r.id} className="hover:bg-blue-50/30 transition group cursor-default">
+                                                            <td className="px-10 py-8">
+                                                                <p className="text-[10px] font-black font-mono text-slate-400 uppercase leading-none">{r.timestampStr?.split(',')[0] || 'Hoy'}</p>
+                                                                <p className="text-[11px] font-bold text-slate-300 mt-1">{r.timestampStr?.split(',')[1] || '--:--'}</p>
+                                                            </td>
+                                                            <td className="px-10 py-8">
+                                                                <span className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest ${r.type === 'venta' ? 'bg-blue-100 text-blue-600' : 'bg-purple-100 text-purple-600'}`}>
+                                                                    {r.type}
+                                                                </span>
+                                                            </td>
+                                                            <td className="px-10 py-8">
+                                                                <p className="font-black text-slate-800 tracking-tight text-lg">{r.customer || 'Control Técnico'}</p>
+                                                                <div className="flex items-center gap-2 mt-1">
+                                                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{r.category || 'Monitoreo'}</p>
+                                                                    <span className="text-slate-200 text-xs">•</span>
+                                                                    <p className="text-[10px] text-blue-400 font-bold uppercase tracking-widest">{r.createdBy || 'Sistema'}</p>
+                                                                </div>
+                                                            </td>
+                                                            <td className="px-10 py-8 text-right">
+                                                                <span className="font-black text-slate-900 text-2xl tracking-tighter">
+                                                                    {r.type === 'venta' ? `$${Number(r.amount || 0).toFixed(2)}` : '-'}
+                                                                </span>
+                                                            </td>
+                                                        </tr>
+                                                    ))
+                                                )}
+                                            </tbody>
                                         </table>
                                     </div>
                                 </div>
