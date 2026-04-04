@@ -21,21 +21,20 @@
         body { font-family: 'Inter', sans-serif; }
         .animate-in { animation: fadeIn 0.3s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        /* Ocultar scrollbar pero permitir scroll */
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 
     <link rel="manifest" href="manifest.json">
-<script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('sw.js')
-        .then(reg => console.log('App lista para instalar'))
-        .catch(err => console.log('Error al registrar', err));
-    });
-  }
-</script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('sw.js')
+            .then(reg => console.log('App lista para instalar'))
+            .catch(err => console.log('Error al registrar', err));
+        });
+      }
+    </script>
 </head>
 <body class="bg-slate-50">
     <div id="root"></div>
@@ -43,27 +42,23 @@
     <script type="text/babel">
         const { useState, useEffect, useMemo } = React;
 
-        // --- CONFIGURACIÓN DE FIREBASE ---
-        // Manejo seguro de variables de entorno del sistema
-       const firebaseConfig = {
-  apiKey: "AIzaSyDIp95fqGFn2mgJ_031a1Y_JfeKECKZTOk",
-  authDomain: "potabilizadora-65aeb.firebaseapp.com",
-  projectId: "potabilizadora-65aeb",
-  storageBucket: "potabilizadora-65aeb.firebasestorage.app",
-  messagingSenderId: "503467709475",
-  appId: "1:503467709475:web:dcad5aa24d0bf9d23acd96",
-  measurementId: "G-E3TE034RV5"
-};
+        const firebaseConfig = {
+            apiKey: "AIzaSyDIp95fqGFn2mgJ_031a1Y_JfeKECKZTOk",
+            authDomain: "potabilizadora-65aeb.firebaseapp.com",
+            projectId: "potabilizadora-65aeb",
+            storageBucket: "potabilizadora-65aeb.firebasestorage.app",
+            messagingSenderId: "503467709475",
+            appId: "1:503467709475:web:dcad5aa24d0bf9d23acd96",
+            measurementId: "G-E3TE034RV5"
+        };
 
-        if (!firebase.apps.length && firebaseConfig.apiKey !== "demo") {
+        if (!firebase.apps.length) {
             firebase.initializeApp(firebaseConfig);
         }
         
-        const auth = firebase.apps.length ? firebase.auth() : null;
-        const db = firebase.apps.length ? firebase.firestore() : null;
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'potabilizadora-app-v1';
+        const auth = firebase.auth();
+        const db = firebase.firestore();
 
-        // Componente de Iconos SVG
         const Icon = ({ name, size = 20, className = "" }) => {
             const icons = {
                 droplets: <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/></svg>,
@@ -81,61 +76,24 @@
 
         const App = () => {
             const [user, setUser] = useState(null);
-            const [loading, setLoading] = useState(true);
+            const [loading, setLoading] = useState(false);
             const [authForm, setAuthForm] = useState({ username: '', password: '' });
             const [loginError, setLoginError] = useState('');
             const [records, setRecords] = useState([]);
             const [view, setView] = useState('dashboard');
             const [formData, setFormData] = useState({
-                type: 'venta',
-                category: 'garrafon',
-                customer: '',
-                quantity: '',
-                amount: '',
-                ph: '7.0',
-                tds: '',
-                description: ''
+                type: 'venta', category: 'garrafon', customer: '', quantity: '', amount: '', ph: '7.0', tds: '', description: ''
             });
 
-            // Inicialización de Auth
+            // Escucha corregida: Colección 'operaciones' directa
             useEffect(() => {
-                const initAuth = async () => {
-                    if (!auth) {
-                        setLoading(false);
-                        return;
-                    }
-                    try {
-                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                            await auth.signInWithCustomToken(__initial_auth_token);
-                        } else {
-                            await auth.signInAnonymously();
-                        }
-                    } catch (err) {
-                        console.error("Auth error:", err);
-                    } finally {
-                        setLoading(false);
-                    }
-                };
-                initAuth();
-            }, []);
-
-            // Escucha de datos en tiempo real
-            useEffect(() => {
-                if (!db || !auth?.currentUser) return;
-
-                const recordsRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('operaciones');
-                
-                const unsubscribe = recordsRef.onSnapshot((snapshot) => {
-                    const data = snapshot.docs.map(doc => ({
-                        id: doc.id,
-                        ...doc.data()
-                    }));
-                    const sorted = data.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
-                    setRecords(sorted);
-                }, (error) => {
-                    console.error("Firestore read error:", error);
-                });
-
+                if (!user) return;
+                const unsubscribe = db.collection('operaciones')
+                    .orderBy('createdAt', 'desc')
+                    .onSnapshot((snapshot) => {
+                        const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                        setRecords(data);
+                    }, (err) => console.error("Firestore Error:", err));
                 return () => unsubscribe();
             }, [user]);
 
@@ -148,17 +106,15 @@
                     setUser({ role: 'user', name: 'Operador de Turno' });
                     setView('dashboard');
                 } else {
-                    setLoginError('Credenciales incorrectas para demostración.');
+                    setLoginError('Credenciales incorrectas.');
                 }
             };
 
             const handleSubmitRecord = async (e) => {
                 e.preventDefault();
-                if (!db) return;
-                
                 try {
-                    const recordsRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('operaciones');
-                    await recordsRef.add({
+                    // Guardado corregido: Ruta directa
+                    await db.collection('operaciones').add({
                         ...formData,
                         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
                         timestampStr: new Date().toLocaleString('es-MX'),
@@ -168,6 +124,7 @@
                     setView('dashboard');
                 } catch (err) {
                     console.error("Save error:", err);
+                    alert("Error al guardar. Verifica las Reglas de Firestore.");
                 }
             };
 
@@ -207,7 +164,6 @@
 
             return (
                 <div className="min-h-screen flex flex-col md:flex-row bg-slate-50">
-                    {/* Sidebar */}
                     <nav className="w-full md:w-72 bg-slate-900 text-white p-6 flex flex-col shadow-xl z-10 shrink-0">
                         <div className="flex items-center gap-3 mb-12">
                             <Icon name="droplets" className="text-blue-400" size={32} />
@@ -230,7 +186,6 @@
                         </div>
                     </nav>
 
-                    {/* Main Content */}
                     <main className="flex-1 p-6 md:p-12 overflow-y-auto no-scrollbar">
                         {view === 'register' ? (
                             <div className="max-w-2xl mx-auto bg-white rounded-[2.5rem] shadow-2xl overflow-hidden animate-in border border-slate-100">
@@ -282,7 +237,7 @@
                                     ) : (
                                         <div className="grid grid-cols-2 gap-4">
                                             <div className="space-y-1">
-                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Potencial de Hidrógeno (pH)</label>
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">pH</label>
                                                 <input type="number" step="0.1" className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-xl font-bold outline-none focus:border-blue-500" placeholder="7.0" value={formData.ph} onChange={e => setFormData({...formData, ph: e.target.value})} />
                                             </div>
                                             <div className="space-y-1">
@@ -318,30 +273,22 @@
                                 </header>
 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-                                    <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100 transition hover:shadow-md">
-                                        <div className="bg-green-50 w-14 h-14 rounded-2xl flex items-center justify-center mb-6">
-                                            <Icon name="trend" size={28} className="text-green-600" />
-                                        </div>
-                                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Ingresos del Día</p>
-                                        <p className="text-4xl font-black text-slate-900 mt-2 tracking-tighter">
-                                            ${records.filter(r => r.type === 'venta').reduce((acc, curr) => acc + Number(curr.amount || 0), 0).toLocaleString('en-US', {minimumFractionDigits: 2})}
-                                        </p>
+                                    <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
+                                        <Icon name="trend" size={28} className="text-green-600 mb-4" />
+                                        <p className="text-[10px] text-slate-400 font-black uppercase">Ingresos Hoy</p>
+                                        <p className="text-4xl font-black text-slate-900 mt-2">${records.filter(r => r.type === 'venta').reduce((acc, curr) => acc + Number(curr.amount || 0), 0).toFixed(2)}</p>
                                     </div>
-                                    <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100 transition hover:shadow-md">
-                                        <div className="bg-blue-50 w-14 h-14 rounded-2xl flex items-center justify-center mb-6">
-                                            <Icon name="truck" size={28} className="text-blue-600" />
-                                        </div>
-                                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Servicios Totales</p>
-                                        <p className="text-4xl font-black text-slate-900 mt-2 tracking-tighter">{records.length}</p>
+                                    <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
+                                        <Icon name="truck" size={28} className="text-blue-600 mb-4" />
+                                        <p className="text-[10px] text-slate-400 font-black uppercase">Servicios</p>
+                                        <p className="text-4xl font-black text-slate-900 mt-2">{records.length}</p>
                                     </div>
-                                    <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100 transition hover:shadow-md">
-                                        <div className="bg-purple-50 w-14 h-14 rounded-2xl flex items-center justify-center mb-6">
-                                            <Icon name="shield" size={28} className="text-purple-600" />
-                                        </div>
+                                    <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
+                                        <Icon name="shield" size={28} className="text-purple-600 mb-4" />
                                         <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Estado Sistema</p>
                                         <div className="flex items-center gap-2 mt-2">
                                             <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                                            <p className="text-2xl font-black text-green-600 uppercase tracking-tighter">Sincronizado</p>
+                                            <p className="text-2xl font-black text-green-600 uppercase">Sincronizado</p>
                                         </div>
                                     </div>
                                 </div>
@@ -363,39 +310,14 @@
                                             </thead>
                                             <tbody className="divide-y divide-slate-50">
                                                 {records.length === 0 ? (
-                                                    <tr>
-                                                        <td colSpan="4" className="px-10 py-24 text-center">
-                                                            <div className="flex flex-col items-center text-slate-300">
-                                                                <Icon name="droplets" size={48} className="mb-4 opacity-20" />
-                                                                <p className="font-bold italic">Esperando primeros registros...</p>
-                                                            </div>
-                                                        </td>
-                                                    </tr>
+                                                    <tr><td colSpan="4" className="px-10 py-24 text-center font-bold italic text-slate-300">Esperando registros...</td></tr>
                                                 ) : (
                                                     records.map(r => (
-                                                        <tr key={r.id} className="hover:bg-blue-50/30 transition group cursor-default">
-                                                            <td className="px-10 py-8">
-                                                                <p className="text-[10px] font-black font-mono text-slate-400 uppercase leading-none">{r.timestampStr?.split(',')[0] || 'Hoy'}</p>
-                                                                <p className="text-[11px] font-bold text-slate-300 mt-1">{r.timestampStr?.split(',')[1] || '--:--'}</p>
-                                                            </td>
-                                                            <td className="px-10 py-8">
-                                                                <span className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest ${r.type === 'venta' ? 'bg-blue-100 text-blue-600' : 'bg-purple-100 text-purple-600'}`}>
-                                                                    {r.type}
-                                                                </span>
-                                                            </td>
-                                                            <td className="px-10 py-8">
-                                                                <p className="font-black text-slate-800 tracking-tight text-lg">{r.customer || 'Control Técnico'}</p>
-                                                                <div className="flex items-center gap-2 mt-1">
-                                                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{r.category || 'Monitoreo'}</p>
-                                                                    <span className="text-slate-200 text-xs">•</span>
-                                                                    <p className="text-[10px] text-blue-400 font-bold uppercase tracking-widest">{r.createdBy || 'Sistema'}</p>
-                                                                </div>
-                                                            </td>
-                                                            <td className="px-10 py-8 text-right">
-                                                                <span className="font-black text-slate-900 text-2xl tracking-tighter">
-                                                                    {r.type === 'venta' ? `$${Number(r.amount || 0).toFixed(2)}` : '-'}
-                                                                </span>
-                                                            </td>
+                                                        <tr key={r.id} className="hover:bg-blue-50/30 transition">
+                                                            <td className="px-10 py-8 text-[11px] font-bold text-slate-400">{r.timestampStr || 'Hoy'}</td>
+                                                            <td className="px-10 py-8"><span className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase ${r.type === 'venta' ? 'bg-blue-100 text-blue-600' : 'bg-purple-100 text-purple-600'}`}>{r.type}</span></td>
+                                                            <td className="px-10 py-8 font-black text-slate-800 text-lg">{r.customer || 'Control Técnico'}</td>
+                                                            <td className="px-10 py-8 text-right font-black text-slate-900 text-2xl tracking-tighter">{r.type === 'venta' ? `$${Number(r.amount).toFixed(2)}` : '-'}</td>
                                                         </tr>
                                                     ))
                                                 )}
