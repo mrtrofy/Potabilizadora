@@ -5,16 +5,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AquaControl Cloud - Sistema de Gestión</title>
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- React y Babel -->
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <!-- Firebase SDK (Compat) -->
+    
+    <!-- SDK de Firebase -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
@@ -24,23 +23,12 @@
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
-
-    <link rel="manifest" href="manifest.json">
-    <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('sw.js')
-            .then(reg => console.log('App lista para instalar'))
-            .catch(err => console.log('Error al registrar', err));
-        });
-      }
-    </script>
 </head>
 <body class="bg-slate-50">
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect, useMemo } = React;
+        const { useState, useEffect } = React;
 
         const firebaseConfig = {
             apiKey: "AIzaSyDIp95fqGFn2mgJ_031a1Y_JfeKECKZTOk",
@@ -48,21 +36,17 @@
             projectId: "potabilizadora-65aeb",
             storageBucket: "potabilizadora-65aeb.firebasestorage.app",
             messagingSenderId: "503467709475",
-            appId: "1:503467709475:web:dcad5aa24d0bf9d23acd96",
-            measurementId: "G-E3TE034RV5"
+            appId: "1:503467709475:web:dcad5aa24d0bf9d23acd96"
         };
 
         if (!firebase.apps.length) {
             firebase.initializeApp(firebaseConfig);
         }
-        
-        const auth = firebase.auth();
         const db = firebase.firestore();
 
         const Icon = ({ name, size = 20, className = "" }) => {
             const icons = {
                 droplets: <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/></svg>,
-                loader: <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`${className} animate-spin`}><path d="M12 2v4"/><path d="m16.2 7.8 2.9-2.9"/><path d="M18 12h4"/><path d="m16.2 16.2 2.9 2.9"/><path d="M12 18v4"/><path d="m4.9 19.1 2.9-2.9"/><path d="M2 12h4"/><path d="m4.9 4.9 2.9 2.9"/></svg>,
                 dashboard: <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>,
                 plus: <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"/><path d="M12 8v8"/><path d="M8 12h8"/></svg>,
                 logout: <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>,
@@ -76,24 +60,25 @@
 
         const App = () => {
             const [user, setUser] = useState(null);
-            const [loading, setLoading] = useState(false);
-            const [authForm, setAuthForm] = useState({ username: '', password: '' });
-            const [loginError, setLoginError] = useState('');
             const [records, setRecords] = useState([]);
             const [view, setView] = useState('dashboard');
+            const [authForm, setAuthForm] = useState({ username: '', password: '' });
             const [formData, setFormData] = useState({
                 type: 'venta', category: 'garrafon', customer: '', quantity: '', amount: '', ph: '7.0', tds: '', description: ''
             });
 
-            // Escucha corregida: Colección 'operaciones' directa
             useEffect(() => {
                 if (!user) return;
-                const unsubscribe = db.collection('operaciones')
-                    .orderBy('createdAt', 'desc')
+                // Eliminamos el orderBy temporalmente para descartar error de índices
+                const unsubscribe = db.collection('registros')
                     .onSnapshot((snapshot) => {
                         const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                        setRecords(data);
-                    }, (err) => console.error("Firestore Error:", err));
+                        // Ordenamos localmente para evitar que Firebase pida crear un índice manual
+                        const sortedData = data.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+                        setRecords(sortedData);
+                    }, (error) => {
+                        console.error("Error en tiempo real:", error.message);
+                    });
                 return () => unsubscribe();
             }, [user]);
 
@@ -101,61 +86,48 @@
                 e.preventDefault();
                 if (authForm.username === 'admin' && authForm.password === 'admin123') {
                     setUser({ role: 'admin', name: 'Administrador' });
-                    setView('dashboard');
                 } else if (authForm.username === 'empleado1' && authForm.password === 'admin123') {
-                    setUser({ role: 'user', name: 'Operador de Turno' });
-                    setView('dashboard');
+                    setUser({ role: 'user', name: 'Operador 1' });
                 } else {
-                    setLoginError('Credenciales incorrectas.');
+                    alert('Usuario no válido');
                 }
             };
 
             const handleSubmitRecord = async (e) => {
                 e.preventDefault();
                 try {
-                    // Guardado corregido: Ruta directa
-                    await db.collection('operaciones').add({
+                    const nuevoRegistro = {
                         ...formData,
+                        amount: Number(formData.amount),
+                        quantity: Number(formData.quantity),
                         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                        timestampStr: new Date().toLocaleString('es-MX'),
+                        timestampStr: new Date().toLocaleString(),
                         createdBy: user.name
-                    });
+                    };
+                    
+                    await db.collection('registros').add(nuevoRegistro);
+                    console.log("¡Guardado con éxito!");
+                    
                     setFormData({ type: 'venta', category: 'garrafon', customer: '', quantity: '', amount: '', ph: '7.0', tds: '', description: '' });
                     setView('dashboard');
                 } catch (err) {
-                    console.error("Save error:", err);
-                    alert("Error al guardar. Verifica las Reglas de Firestore.");
+                    console.error("Error al guardar en Firebase:", err.code, err.message);
+                    alert("Error de Firebase: " + err.message);
                 }
             };
 
-            if (loading) return (
-                <div className="min-h-screen flex items-center justify-center bg-slate-50">
-                    <Icon name="loader" size={48} className="text-blue-600" />
-                </div>
-            );
-
             if (!user) {
                 return (
-                    <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4 animate-in">
-                        <div className="max-w-md w-full bg-white rounded-[2rem] shadow-2xl p-10">
+                    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
+                        <div className="bg-white p-10 rounded-[2rem] shadow-2xl w-full max-w-md animate-in">
                             <div className="flex flex-col items-center mb-8">
-                                <div className="bg-blue-600 p-4 rounded-2xl mb-4 shadow-lg shadow-blue-200">
-                                    <Icon name="droplets" size={32} className="text-white" />
-                                </div>
-                                <h1 className="text-2xl font-black text-slate-800 tracking-tight">AquaControl Cloud</h1>
-                                <p className="text-slate-400 text-sm font-medium">Gestión de Potabilizadora</p>
+                                <Icon name="droplets" size={40} className="text-blue-600 mb-2" />
+                                <h1 className="text-2xl font-black text-slate-800">AquaControl Login</h1>
                             </div>
                             <form onSubmit={handleLogin} className="space-y-4">
-                                <div className="space-y-1">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase ml-2 tracking-widest">Usuario</label>
-                                    <input type="text" required className="w-full px-6 py-4 bg-slate-50 border-2 border-transparent rounded-xl outline-none focus:border-blue-500 transition font-semibold" placeholder="admin / empleado1" value={authForm.username} onChange={e => setAuthForm({...authForm, username: e.target.value})} />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase ml-2 tracking-widest">Contraseña</label>
-                                    <input type="password" required className="w-full px-6 py-4 bg-slate-50 border-2 border-transparent rounded-xl outline-none focus:border-blue-500 transition font-semibold" placeholder="••••••••" value={authForm.password} onChange={e => setAuthForm({...authForm, password: e.target.value})} />
-                                </div>
-                                {loginError && <p className="text-red-500 text-xs font-bold px-2">{loginError}</p>}
-                                <button className="w-full bg-blue-600 text-white font-black py-4 rounded-xl shadow-xl shadow-blue-100 hover:bg-blue-700 transition active:scale-95 uppercase tracking-widest mt-4">Iniciar Sesión</button>
+                                <input type="text" placeholder="Usuario" className="w-full p-4 bg-slate-100 rounded-xl font-bold outline-none" onChange={e => setAuthForm({...authForm, username: e.target.value})} />
+                                <input type="password" placeholder="Contraseña" className="w-full p-4 bg-slate-100 rounded-xl font-bold outline-none" onChange={e => setAuthForm({...authForm, password: e.target.value})} />
+                                <button className="w-full bg-blue-600 text-white font-black py-4 rounded-xl shadow-lg">ENTRAR</button>
                             </form>
                         </div>
                     </div>
@@ -163,167 +135,91 @@
             }
 
             return (
-                <div className="min-h-screen flex flex-col md:flex-row bg-slate-50">
-                    <nav className="w-full md:w-72 bg-slate-900 text-white p-6 flex flex-col shadow-xl z-10 shrink-0">
-                        <div className="flex items-center gap-3 mb-12">
-                            <Icon name="droplets" className="text-blue-400" size={32} />
-                            <span className="font-black text-2xl tracking-tighter uppercase">AQUA<span className="text-blue-400">CLOUD</span></span>
+                <div className="min-h-screen flex flex-col md:flex-row">
+                    {/* Sidebar */}
+                    <nav className="w-full md:w-64 bg-slate-900 text-white p-6 flex flex-col shrink-0">
+                        <div className="flex items-center gap-2 mb-10">
+                            <Icon name="droplets" className="text-blue-400" />
+                            <span className="font-black text-xl tracking-tighter">AQUACLOUD</span>
                         </div>
                         <div className="flex-1 space-y-2">
-                            <button onClick={() => setView('dashboard')} className={`w-full flex items-center gap-3 p-4 rounded-xl transition font-bold text-sm ${view === 'dashboard' ? 'bg-blue-600 shadow-lg shadow-blue-900/50' : 'hover:bg-slate-800 text-slate-400'}`}>
+                            <button onClick={() => setView('dashboard')} className={`w-full flex items-center gap-3 p-4 rounded-xl font-bold ${view === 'dashboard' ? 'bg-blue-600' : 'text-slate-400'}`}>
                                 <Icon name="dashboard" /> Dashboard
                             </button>
-                            <button onClick={() => setView('register')} className={`w-full flex items-center gap-3 p-4 rounded-xl transition font-bold text-sm ${view === 'register' ? 'bg-blue-600 shadow-lg shadow-blue-900/50' : 'hover:bg-slate-800 text-slate-400'}`}>
+                            <button onClick={() => setView('register')} className={`w-full flex items-center gap-3 p-4 rounded-xl font-bold ${view === 'register' ? 'bg-blue-600' : 'text-slate-400'}`}>
                                 <Icon name="plus" /> Nuevo Registro
                             </button>
                         </div>
-                        <div className="mt-auto pt-6 border-t border-slate-800">
-                            <p className="text-[10px] text-slate-500 uppercase font-black mb-1 tracking-widest">Sesión iniciada</p>
-                            <p className="font-bold text-blue-400 mb-6 truncate text-sm">{user.name}</p>
-                            <button onClick={() => setUser(null)} className="w-full flex items-center gap-3 p-4 text-red-400 hover:bg-red-500/10 rounded-xl transition font-black text-xs uppercase tracking-widest">
-                                <Icon name="logout" size={18} /> Cerrar Sesión
-                            </button>
-                        </div>
+                        <button onClick={() => setUser(null)} className="mt-auto p-4 text-red-400 font-bold flex items-center gap-2">
+                            <Icon name="logout" /> Salir
+                        </button>
                     </nav>
 
-                    <main className="flex-1 p-6 md:p-12 overflow-y-auto no-scrollbar">
+                    {/* Contenido */}
+                    <main className="flex-1 p-8 md:p-12 bg-slate-50 overflow-y-auto">
                         {view === 'register' ? (
-                            <div className="max-w-2xl mx-auto bg-white rounded-[2.5rem] shadow-2xl overflow-hidden animate-in border border-slate-100">
-                                <div className="bg-blue-600 p-8 text-white">
-                                    <h2 className="text-2xl font-black tracking-tight">Registrar Operación</h2>
-                                    <p className="text-blue-100 text-[10px] opacity-80 uppercase tracking-widest font-black mt-1">Formulario de Control de Planta</p>
-                                </div>
-                                <form onSubmit={handleSubmitRecord} className="p-8 space-y-6">
+                            <div className="max-w-xl mx-auto bg-white rounded-[2rem] shadow-xl overflow-hidden animate-in">
+                                <div className="bg-blue-600 p-6 text-white font-black text-xl">Registrar Venta</div>
+                                <form onSubmit={handleSubmitRecord} className="p-8 space-y-4">
+                                    <input type="text" placeholder="Cliente" className="w-full p-4 bg-slate-50 rounded-xl font-bold" value={formData.customer} onChange={e => setFormData({...formData, customer: e.target.value})} required />
                                     <div className="grid grid-cols-2 gap-4">
-                                        <div className="space-y-1">
-                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Tipo de Evento</label>
-                                            <select className="w-full p-4 bg-slate-50 rounded-xl font-bold outline-none border-2 border-transparent focus:border-blue-500 appearance-none cursor-pointer" value={formData.type} onChange={e => setFormData({...formData, type: e.target.value})}>
-                                                <option value="venta">Transacción / Venta</option>
-                                                <option value="calidad">Control de Calidad</option>
-                                            </select>
-                                        </div>
-                                        {formData.type === 'venta' && (
-                                            <div className="space-y-1">
-                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Producto</label>
-                                                <select className="w-full p-4 bg-slate-50 rounded-xl font-bold outline-none border-2 border-transparent focus:border-blue-500 appearance-none cursor-pointer" value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})}>
-                                                    <option value="garrafon">Garrafón (20L)</option>
-                                                    <option value="cisterna">Cisterna (Lote)</option>
-                                                    <option value="botella">Botella (500ml)</option>
-                                                </select>
-                                            </div>
-                                        )}
+                                        <input type="number" placeholder="Cantidad" className="p-4 bg-slate-50 rounded-xl font-bold" value={formData.quantity} onChange={e => setFormData({...formData, quantity: e.target.value})} required />
+                                        <input type="number" step="0.01" placeholder="Monto $" className="p-4 bg-blue-50 text-blue-600 rounded-xl font-black" value={formData.amount} onChange={e => setFormData({...formData, amount: e.target.value})} required />
                                     </div>
-                                    
-                                    {formData.type === 'venta' ? (
-                                        <div className="space-y-6">
-                                            <div className="space-y-1">
-                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Cliente / Referencia</label>
-                                                <input type="text" required className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-xl font-bold outline-none focus:border-blue-500" placeholder="Nombre o No. de Ticket" value={formData.customer} onChange={e => setFormData({...formData, customer: e.target.value})} />
-                                            </div>
-                                            <div className="grid grid-cols-2 gap-4">
-                                                <div className="space-y-1">
-                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Cantidad</label>
-                                                    <input type="number" required className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-xl font-bold outline-none focus:border-blue-500" placeholder="0" value={formData.quantity} onChange={e => setFormData({...formData, quantity: e.target.value})} />
-                                                </div>
-                                                <div className="space-y-1">
-                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Cobro Total</label>
-                                                    <div className="relative">
-                                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-blue-600">$</span>
-                                                        <input type="number" step="0.01" required className="w-full p-4 pl-8 bg-blue-50 border-2 border-transparent text-blue-600 rounded-xl font-black outline-none focus:border-blue-600" placeholder="0.00" value={formData.amount} onChange={e => setFormData({...formData, amount: e.target.value})} />
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div className="space-y-1">
-                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">pH</label>
-                                                <input type="number" step="0.1" className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-xl font-bold outline-none focus:border-blue-500" placeholder="7.0" value={formData.ph} onChange={e => setFormData({...formData, ph: e.target.value})} />
-                                            </div>
-                                            <div className="space-y-1">
-                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">TDS (PPM)</label>
-                                                <input type="number" className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-xl font-bold outline-none focus:border-blue-500" placeholder="Ej: 120" value={formData.tds} onChange={e => setFormData({...formData, tds: e.target.value})} />
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    <div className="flex flex-col sm:flex-row gap-4 pt-4">
-                                        <button type="button" onClick={() => setView('dashboard')} className="flex-1 p-5 border-2 border-slate-100 rounded-2xl font-black text-slate-400 hover:bg-slate-50 transition uppercase tracking-widest text-xs">Cancelar</button>
-                                        <button className="flex-[2] p-5 bg-blue-600 text-white rounded-2xl font-black shadow-xl shadow-blue-100 hover:bg-blue-700 transition uppercase tracking-widest text-xs">Guardar Registro</button>
-                                    </div>
+                                    <button className="w-full py-4 bg-blue-600 text-white rounded-xl font-black shadow-lg">GUARDAR EN LA NUBE</button>
                                 </form>
                             </div>
                         ) : (
-                            <div className="space-y-10 animate-in">
-                                <header className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-6">
-                                    <div>
-                                        <p className="text-blue-600 font-black text-xs uppercase tracking-[0.3em] mb-2">Resumen Operativo</p>
-                                        <h2 className="text-5xl font-black text-slate-900 tracking-tighter">Panel Principal</h2>
-                                    </div>
-                                    <div className="flex gap-3">
-                                        {user.role === 'admin' && (
-                                            <button onClick={() => window.print()} className="flex items-center gap-3 bg-slate-900 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-800 transition shadow-xl">
-                                                <Icon name="printer" size={18} /> Reporte PDF
-                                            </button>
-                                        )}
-                                        <button onClick={() => setView('register')} className="flex items-center gap-3 bg-blue-600 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-blue-700 transition shadow-xl shadow-blue-200">
-                                            <Icon name="plus" size={18} /> Nueva Venta
-                                        </button>
-                                    </div>
-                                </header>
+                            <div className="space-y-8 animate-in">
+                                <div className="flex justify-between items-end">
+                                    <h2 className="text-4xl font-black text-slate-900">Panel Principal</h2>
+                                    <button onClick={() => window.print()} className="bg-slate-900 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2">
+                                        <Icon name="printer" /> Reporte
+                                    </button>
+                                </div>
 
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-                                    <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
-                                        <Icon name="trend" size={28} className="text-green-600 mb-4" />
-                                        <p className="text-[10px] text-slate-400 font-black uppercase">Ingresos Hoy</p>
-                                        <p className="text-4xl font-black text-slate-900 mt-2">${records.filter(r => r.type === 'venta').reduce((acc, curr) => acc + Number(curr.amount || 0), 0).toFixed(2)}</p>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                    <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+                                        <p className="text-xs font-black text-slate-400 uppercase">Ventas Hoy</p>
+                                        <p className="text-3xl font-black text-slate-900 mt-1">
+                                            ${records.reduce((acc, r) => acc + Number(r.amount || 0), 0).toFixed(2)}
+                                        </p>
                                     </div>
-                                    <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
-                                        <Icon name="truck" size={28} className="text-blue-600 mb-4" />
-                                        <p className="text-[10px] text-slate-400 font-black uppercase">Servicios</p>
-                                        <p className="text-4xl font-black text-slate-900 mt-2">{records.length}</p>
+                                    <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+                                        <p className="text-xs font-black text-slate-400 uppercase">Registros</p>
+                                        <p className="text-3xl font-black text-slate-900 mt-1">{records.length}</p>
                                     </div>
-                                    <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
-                                        <Icon name="shield" size={28} className="text-purple-600 mb-4" />
-                                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Estado Sistema</p>
-                                        <div className="flex items-center gap-2 mt-2">
-                                            <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                                            <p className="text-2xl font-black text-green-600 uppercase">Sincronizado</p>
+                                    <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                            <p className="text-xs font-black text-green-600 uppercase">Sistema Online</p>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className="bg-white rounded-[3rem] shadow-2xl overflow-hidden border border-slate-100">
-                                    <div className="p-10 border-b border-slate-50 bg-slate-50/30 flex justify-between items-center">
-                                        <h3 className="font-black text-slate-800 uppercase tracking-widest text-xs">Bitácora de Operaciones</h3>
-                                        <span className="bg-blue-100 text-blue-700 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest">Tiempo Real</span>
-                                    </div>
-                                    <div className="overflow-x-auto no-scrollbar">
-                                        <table className="w-full text-left">
-                                            <thead className="bg-slate-50/80 text-[10px] uppercase font-black text-slate-400 tracking-widest border-b border-slate-100">
-                                                <tr>
-                                                    <th className="px-10 py-6">Timestamp</th>
-                                                    <th className="px-10 py-6">Operación</th>
-                                                    <th className="px-10 py-6">Detalle / Cliente</th>
-                                                    <th className="px-10 py-6 text-right">Monto</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody className="divide-y divide-slate-50">
-                                                {records.length === 0 ? (
-                                                    <tr><td colSpan="4" className="px-10 py-24 text-center font-bold italic text-slate-300">Esperando registros...</td></tr>
-                                                ) : (
-                                                    records.map(r => (
-                                                        <tr key={r.id} className="hover:bg-blue-50/30 transition">
-                                                            <td className="px-10 py-8 text-[11px] font-bold text-slate-400">{r.timestampStr || 'Hoy'}</td>
-                                                            <td className="px-10 py-8"><span className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase ${r.type === 'venta' ? 'bg-blue-100 text-blue-600' : 'bg-purple-100 text-purple-600'}`}>{r.type}</span></td>
-                                                            <td className="px-10 py-8 font-black text-slate-800 text-lg">{r.customer || 'Control Técnico'}</td>
-                                                            <td className="px-10 py-8 text-right font-black text-slate-900 text-2xl tracking-tighter">{r.type === 'venta' ? `$${Number(r.amount).toFixed(2)}` : '-'}</td>
-                                                        </tr>
-                                                    ))
-                                                )}
-                                            </tbody>
-                                        </table>
-                                    </div>
+                                <div className="bg-white rounded-3xl shadow-xl overflow-hidden border border-slate-100">
+                                    <table className="w-full text-left">
+                                        <thead className="bg-slate-50 text-[10px] uppercase font-black text-slate-400">
+                                            <tr>
+                                                <th className="px-8 py-4">Fecha</th>
+                                                <th className="px-8 py-4">Cliente</th>
+                                                <th className="px-8 py-4 text-right">Monto</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-50">
+                                            {records.length === 0 ? (
+                                                <tr><td colSpan="3" className="p-20 text-center text-slate-300 font-bold italic">No hay datos en la base de datos...</td></tr>
+                                            ) : (
+                                                records.map(r => (
+                                                    <tr key={r.id} className="hover:bg-blue-50 transition">
+                                                        <td className="px-8 py-5 text-xs text-slate-400 font-bold">{r.timestampStr}</td>
+                                                        <td className="px-8 py-5 font-black text-slate-800">{r.customer}</td>
+                                                        <td className="px-8 py-5 text-right font-black text-blue-600">${Number(r.amount).toFixed(2)}</td>
+                                                    </tr>
+                                                ))
+                                            )}
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
                         )}
