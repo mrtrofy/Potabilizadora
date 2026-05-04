@@ -1,427 +1,346 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <link rel="shortcut icon" href="pngtree-water-splash-drop-logo-png-image_5279737.ico" type="image/x-icon">
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AquaControl Cloud - Sistema de Gestión</title>
-    <!-- Tailwind CSS -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Athlete Tracker PWA</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#2563eb">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="AthleteTracker">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/857/857681.png">
+    
+    <!-- Manifest dinámico -->
+    <link rel="manifest" id="pwa-manifest">
+
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- React y Babel -->
-    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <!-- Firebase SDK (Compat) -->
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
-        body { font-family: 'Inter', sans-serif; }
-        .animate-in { animation: fadeIn 0.3s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        /* Ocultar scrollbar pero permitir scroll */
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-    </style>
-
-    <link rel="manifest" href="manifest.json">
-<script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('sw.js')
-        .then(reg => console.log('App lista para instalar'))
-        .catch(err => console.log('Error al registrar', err));
-    });
-  }
-</script>
-</head>
-<body class="bg-slate-50">
-    <div id="root"></div>
-
-    <script type="text/babel">
-        const { useState, useEffect, useMemo } = React;
-
-        // --- CONFIGURACIÓN DE FIREBASE ---
-        // Manejo seguro de variables de entorno del sistema
-       const firebaseConfig = {
-  apiKey: "AIzaSyDIp95fqGFn2mgJ_031a1Y_JfeKECKZTOk",
-  authDomain: "potabilizadora-65aeb.firebaseapp.com",
-  projectId: "potabilizadora-65aeb",
-  storageBucket: "potabilizadora-65aeb.firebasestorage.app",
-  messagingSenderId: "503467709475",
-  appId: "1:503467709475:web:dcad5aa24d0bf9d23acd96",
-  measurementId: "G-E3TE034RV5"
-};
-
-        if (!firebase.apps.length && firebaseConfig.apiKey !== "demo") {
-            firebase.initializeApp(firebaseConfig);
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+            -webkit-tap-highlight-color: transparent;
+            overscroll-behavior-y: contain;
         }
-        
-        const auth = firebase.apps.length ? firebase.auth() : null;
-        const db = firebase.apps.length ? firebase.firestore() : null;
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'potabilizadora-app-v1';
+        .status-pill { transition: all 0.2s ease; }
+        .progress-bar { transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #2563eb;
+            cursor: pointer;
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        @media all and (display-mode: standalone) {
+            .pwa-hide { display: none; }
+            body { padding-top: env(safe-area-inset-top); }
+        }
+    </style>
+</head>
+<body class="p-3 sm:p-6 md:p-8 pb-24">
 
-        // Componente de Iconos SVG
-        const Icon = ({ name, size = 20, className = "" }) => {
-            const icons = {
-                droplets: <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/></svg>,
-                loader: <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`${className} animate-spin`}><path d="M12 2v4"/><path d="m16.2 7.8 2.9-2.9"/><path d="M18 12h4"/><path d="m16.2 16.2 2.9 2.9"/><path d="M12 18v4"/><path d="m4.9 19.1 2.9-2.9"/><path d="M2 12h4"/><path d="m4.9 4.9 2.9 2.9"/></svg>,
-                dashboard: <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>,
-                plus: <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"/><path d="M12 8v8"/><path d="M8 12h8"/></svg>,
-                logout: <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>,
-                printer: <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>,
-                trend: <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>,
-                truck: <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M10 17h4V5H2v12h3"/><circle cx="7" cy="17" r="2"/><path d="M15 17h5l3-3v-7h-8v10Z"/><circle cx="18" cy="17" r="2"/></svg>,
-                shield: <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/></svg>
-            };
-            return icons[name] || null;
-        };
+    <div class="max-w-4xl mx-auto">
+        <!-- Header Principal -->
+        <header class="flex justify-between items-center mb-8">
+            <div class="text-left">
+                <h1 class="text-2xl font-bold text-gray-900 tracking-tight">Athlete Tracker</h1>
+                <p class="text-xs text-gray-500">Modo PWA Activo</p>
+            </div>
+            <!-- Botón de Instalación (oculto por defecto) -->
+            <button id="install-button" class="hidden bg-blue-100 text-blue-700 px-4 py-2 rounded-full text-xs font-bold animate-bounce">
+                Instalar App
+            </button>
+        </header>
 
-        const App = () => {
-            const [user, setUser] = useState(null);
-            const [loading, setLoading] = useState(true);
-            const [authForm, setAuthForm] = useState({ username: '', password: '' });
-            const [loginError, setLoginError] = useState('');
-            const [records, setRecords] = useState([]);
-            const [view, setView] = useState('dashboard');
-            const [formData, setFormData] = useState({
-                type: 'venta',
-                category: 'garrafon',
-                customer: '',
-                quantity: '',
-                amount: '',
-                ph: '7.0',
-                tds: '',
-                description: ''
-            });
-
-            // Inicialización de Auth
-            useEffect(() => {
-                const initAuth = async () => {
-                    if (!auth) {
-                        setLoading(false);
-                        return;
-                    }
-                    try {
-                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                            await auth.signInWithCustomToken(__initial_auth_token);
-                        } else {
-                            await auth.signInAnonymously();
-                        }
-                    } catch (err) {
-                        console.error("Auth error:", err);
-                    } finally {
-                        setLoading(false);
-                    }
-                };
-                initAuth();
-            }, []);
-
-            // Escucha de datos en tiempo real
-// Escucha de datos en tiempo real CORREGIDO
-            useEffect(() => {
-                if (!db) return; // Eliminamos la dependencia de auth?.currentUser para que cargue siempre
-
-                const recordsRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('operaciones');
-                
-                const unsubscribe = recordsRef.onSnapshot((snapshot) => {
-                    if (snapshot.empty) {
-                        setRecords([]);
-                        return;
-                    }
-                    const data = snapshot.docs.map(doc => ({
-                        id: doc.id,
-                        ...doc.data()
-                    }));
-                    // Ordenamos manualmente por fecha para evitar errores de índices en Firebase
-                    const sorted = data.sort((a, b) => {
-                        const dateA = a.createdAt?.seconds || 0;
-                        const dateB = b.createdAt?.seconds || 0;
-                        return dateB - dateA;
-                    });
-                    setRecords(sorted);
-                }, (error) => {
-                    console.error("Firestore read error:", error);
-                });
-
-                return () => unsubscribe();
-            }, [db, appId]); // Cambiamos la dependencia de [user] por [db, appId]
-
-            const handleLogin = (e) => {
-                e.preventDefault();
-                if (authForm.username === 'admin' && authForm.password === 'admin123') {
-                    setUser({ role: 'admin', name: 'Administrador' });
-                    setView('dashboard');
-                } else if (authForm.username === 'empleado1' && authForm.password === 'admin123') {
-                    setUser({ role: 'user', name: 'Operador de Turno' });
-                    setView('dashboard');
-                } else {
-                    setLoginError('Credenciales incorrectas para demostración.');
-                }
-            };
-
-            const handleSubmitRecord = async (e) => {
-                e.preventDefault();
-                if (!db) return;
-                
-                try {
-                    const recordsRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('operaciones');
-                    await recordsRef.add({
-                        ...formData,
-                        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                        timestampStr: new Date().toLocaleString('es-MX'),
-                        createdBy: user.name
-                    });
-                    setFormData({ type: 'venta', category: 'garrafon', customer: '', quantity: '', amount: '', ph: '7.0', tds: '', description: '' });
-                    setView('dashboard');
-                } catch (err) {
-                    console.error("Save error:", err);
-                }
-            };
-
-            if (loading) return (
-                <div className="min-h-screen flex items-center justify-center bg-slate-50">
-                    <Icon name="loader" size={48} className="text-blue-600" />
+        <!-- SECCIÓN 1: REGISTRO -->
+        <section class="mb-8">
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                <div class="flex items-center gap-2 mb-4">
+                    <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold">+</div>
+                    <h2 class="text-lg font-bold text-gray-800">Nuevo Atleta</h2>
                 </div>
-            );
+                <div class="flex flex-col sm:flex-row gap-3">
+                    <input type="text" id="new-athlete-name" placeholder="Nombre completo" 
+                           class="flex-grow bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-blue-100">
+                    <button onclick="addAthlete()" class="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold text-sm active:scale-95 shadow-md shadow-blue-100">
+                        Registrar
+                    </button>
+                </div>
+            </div>
+        </section>
 
-            if (!user) {
-                return (
-                    <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4 animate-in">
-                        <div className="max-w-md w-full bg-white rounded-[2rem] shadow-2xl p-10">
-                            <div className="flex flex-col items-center mb-8">
-                                <div className="bg-blue-600 p-4 rounded-2xl mb-4 shadow-lg shadow-blue-200">
-                                    <Icon name="droplets" size={32} className="text-white" />
-                                </div>
-                                <h1 className="text-2xl font-black text-slate-800 tracking-tight">AquaControl Cloud</h1>
-                                <p className="text-slate-400 text-sm font-medium">Gestión de Potabilizadora</p>
-                            </div>
-                            <form onSubmit={handleLogin} className="space-y-4">
-                                <div className="space-y-1">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase ml-2 tracking-widest">Usuario</label>
-                                    <input type="text" required className="w-full px-6 py-4 bg-slate-50 border-2 border-transparent rounded-xl outline-none focus:border-blue-500 transition font-semibold" placeholder="admin / empleado1" value={authForm.username} onChange={e => setAuthForm({...authForm, username: e.target.value})} />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase ml-2 tracking-widest">Contraseña</label>
-                                    <input type="password" required className="w-full px-6 py-4 bg-slate-50 border-2 border-transparent rounded-xl outline-none focus:border-blue-500 transition font-semibold" placeholder="••••••••" value={authForm.password} onChange={e => setAuthForm({...authForm, password: e.target.value})} />
-                                </div>
-                                {loginError && <p className="text-red-500 text-xs font-bold px-2">{loginError}</p>}
-                                <button className="w-full bg-blue-600 text-white font-black py-4 rounded-xl shadow-xl shadow-blue-100 hover:bg-blue-700 transition active:scale-95 uppercase tracking-widest mt-4">Iniciar Sesión</button>
-                            </form>
-                        </div>
+        <!-- SECCIÓN 2: CONTROL -->
+        <section class="space-y-4">
+            <div class="flex items-center justify-between bg-gray-900 p-4 rounded-2xl">
+                <input type="date" id="session-date" class="bg-transparent text-white font-medium outline-none text-sm cursor-pointer">
+                <button onclick="saveSession()" class="bg-green-500 text-white px-4 py-2 rounded-lg font-bold text-xs active:scale-95">
+                    Guardar Sesión
+                </button>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left min-w-[500px]">
+                        <thead>
+                            <tr class="bg-gray-50 text-gray-400 text-[10px] uppercase font-bold tracking-widest">
+                                <th class="p-4">Atleta</th>
+                                <th class="p-4 text-center">Estado</th>
+                                <th class="p-4 text-center">Rendimiento</th>
+                                <th class="p-4 text-center"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="athlete-grid"></tbody>
+                    </table>
+                    <div id="empty-state" class="hidden py-16 text-center text-gray-400 text-sm">
+                        No hay atletas registrados.
                     </div>
-                );
-            }
-
-            return (
-                <div className="min-h-screen flex flex-col md:flex-row bg-slate-50">
-                    {/* Sidebar */}
-                    <nav className="w-full md:w-72 bg-slate-900 text-white p-6 flex flex-col shadow-xl z-10 shrink-0">
-                        <div className="flex items-center gap-3 mb-12">
-                            <Icon name="droplets" className="text-blue-400" size={32} />
-                            <span className="font-black text-2xl tracking-tighter uppercase">AQUA<span className="text-blue-400">CLOUD</span></span>
-                        </div>
-                        <div className="flex-1 space-y-2">
-                            <button onClick={() => setView('dashboard')} className={`w-full flex items-center gap-3 p-4 rounded-xl transition font-bold text-sm ${view === 'dashboard' ? 'bg-blue-600 shadow-lg shadow-blue-900/50' : 'hover:bg-slate-800 text-slate-400'}`}>
-                                <Icon name="dashboard" /> Dashboard
-                            </button>
-                            <button onClick={() => setView('register')} className={`w-full flex items-center gap-3 p-4 rounded-xl transition font-bold text-sm ${view === 'register' ? 'bg-blue-600 shadow-lg shadow-blue-900/50' : 'hover:bg-slate-800 text-slate-400'}`}>
-                                <Icon name="plus" /> Nuevo Registro
-                            </button>
-                        </div>
-                        <div className="mt-auto pt-6 border-t border-slate-800">
-                            <p className="text-[10px] text-slate-500 uppercase font-black mb-1 tracking-widest">Sesión iniciada</p>
-                            <p className="font-bold text-blue-400 mb-6 truncate text-sm">{user.name}</p>
-                            <button onClick={() => setUser(null)} className="w-full flex items-center gap-3 p-4 text-red-400 hover:bg-red-500/10 rounded-xl transition font-black text-xs uppercase tracking-widest">
-                                <Icon name="logout" size={18} /> Cerrar Sesión
-                            </button>
-                        </div>
-                    </nav>
-
-                    {/* Main Content */}
-                    <main className="flex-1 p-6 md:p-12 overflow-y-auto no-scrollbar">
-                        {view === 'register' ? (
-                            <div className="max-w-2xl mx-auto bg-white rounded-[2.5rem] shadow-2xl overflow-hidden animate-in border border-slate-100">
-                                <div className="bg-blue-600 p-8 text-white">
-                                    <h2 className="text-2xl font-black tracking-tight">Registrar Operación</h2>
-                                    <p className="text-blue-100 text-[10px] opacity-80 uppercase tracking-widest font-black mt-1">Formulario de Control de Planta</p>
-                                </div>
-                                <form onSubmit={handleSubmitRecord} className="p-8 space-y-6">
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="space-y-1">
-                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Tipo de Evento</label>
-                                            <select className="w-full p-4 bg-slate-50 rounded-xl font-bold outline-none border-2 border-transparent focus:border-blue-500 appearance-none cursor-pointer" value={formData.type} onChange={e => setFormData({...formData, type: e.target.value})}>
-                                                <option value="venta">Transacción / Venta</option>
-                                                <option value="calidad">Control de Calidad</option>
-                                            </select>
-                                        </div>
-                                        {formData.type === 'venta' && (
-                                            <div className="space-y-1">
-                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Producto</label>
-                                                <select className="w-full p-4 bg-slate-50 rounded-xl font-bold outline-none border-2 border-transparent focus:border-blue-500 appearance-none cursor-pointer" value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})}>
-                                                    <option value="garrafon">Garrafón (20L)</option>
-                                                    <option value="cisterna">Cisterna (Lote)</option>
-                                                    <option value="botella">Botella (500ml)</option>
-                                                </select>
-                                            </div>
-                                        )}
-                                    </div>
-                                    
-                                    {formData.type === 'venta' ? (
-                                        <div className="space-y-6">
-                                            <div className="space-y-1">
-                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Cliente / Referencia</label>
-                                                <input type="text" required className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-xl font-bold outline-none focus:border-blue-500" placeholder="Nombre o No. de Ticket" value={formData.customer} onChange={e => setFormData({...formData, customer: e.target.value})} />
-                                            </div>
-                                            <div className="grid grid-cols-2 gap-4">
-                                                <div className="space-y-1">
-                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Cantidad</label>
-                                                    <input type="number" required className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-xl font-bold outline-none focus:border-blue-500" placeholder="0" value={formData.quantity} onChange={e => setFormData({...formData, quantity: e.target.value})} />
-                                                </div>
-                                                <div className="space-y-1">
-                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Cobro Total</label>
-                                                    <div className="relative">
-                                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-blue-600">$</span>
-                                                        <input type="number" step="0.01" required className="w-full p-4 pl-8 bg-blue-50 border-2 border-transparent text-blue-600 rounded-xl font-black outline-none focus:border-blue-600" placeholder="0.00" value={formData.amount} onChange={e => setFormData({...formData, amount: e.target.value})} />
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div className="space-y-1">
-                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Potencial de Hidrógeno (pH)</label>
-                                                <input type="number" step="0.1" className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-xl font-bold outline-none focus:border-blue-500" placeholder="7.0" value={formData.ph} onChange={e => setFormData({...formData, ph: e.target.value})} />
-                                            </div>
-                                            <div className="space-y-1">
-                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">TDS (PPM)</label>
-                                                <input type="number" className="w-full p-4 bg-slate-50 border-2 border-transparent rounded-xl font-bold outline-none focus:border-blue-500" placeholder="Ej: 120" value={formData.tds} onChange={e => setFormData({...formData, tds: e.target.value})} />
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    <div className="flex flex-col sm:flex-row gap-4 pt-4">
-                                        <button type="button" onClick={() => setView('dashboard')} className="flex-1 p-5 border-2 border-slate-100 rounded-2xl font-black text-slate-400 hover:bg-slate-50 transition uppercase tracking-widest text-xs">Cancelar</button>
-                                        <button className="flex-[2] p-5 bg-blue-600 text-white rounded-2xl font-black shadow-xl shadow-blue-100 hover:bg-blue-700 transition uppercase tracking-widest text-xs">Guardar Registro</button>
-                                    </div>
-                                </form>
-                            </div>
-                        ) : (
-                            <div className="space-y-10 animate-in">
-                                <header className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-6">
-                                    <div>
-                                        <p className="text-blue-600 font-black text-xs uppercase tracking-[0.3em] mb-2">Resumen Operativo</p>
-                                        <h2 className="text-5xl font-black text-slate-900 tracking-tighter">Panel Principal</h2>
-                                    </div>
-                                    <div className="flex gap-3">
-                                        {user.role === 'admin' && (
-                                            <button onClick={() => window.print()} className="flex items-center gap-3 bg-slate-900 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-800 transition shadow-xl">
-                                                <Icon name="printer" size={18} /> Reporte PDF
-                                            </button>
-                                        )}
-                                        <button onClick={() => setView('register')} className="flex items-center gap-3 bg-blue-600 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-blue-700 transition shadow-xl shadow-blue-200">
-                                            <Icon name="plus" size={18} /> Nueva Venta
-                                        </button>
-                                    </div>
-                                </header>
-
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-                                    <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100 transition hover:shadow-md">
-                                        <div className="bg-green-50 w-14 h-14 rounded-2xl flex items-center justify-center mb-6">
-                                            <Icon name="trend" size={28} className="text-green-600" />
-                                        </div>
-                                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Ingresos del Día</p>
-                                        <p className="text-4xl font-black text-slate-900 mt-2 tracking-tighter">
-                                            ${records.filter(r => r.type === 'venta').reduce((acc, curr) => acc + Number(curr.amount || 0), 0).toLocaleString('en-US', {minimumFractionDigits: 2})}
-                                        </p>
-                                    </div>
-                                    <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100 transition hover:shadow-md">
-                                        <div className="bg-blue-50 w-14 h-14 rounded-2xl flex items-center justify-center mb-6">
-                                            <Icon name="truck" size={28} className="text-blue-600" />
-                                        </div>
-                                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Servicios Totales</p>
-                                        <p className="text-4xl font-black text-slate-900 mt-2 tracking-tighter">{records.length}</p>
-                                    </div>
-                                    <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100 transition hover:shadow-md">
-                                        <div className="bg-purple-50 w-14 h-14 rounded-2xl flex items-center justify-center mb-6">
-                                            <Icon name="shield" size={28} className="text-purple-600" />
-                                        </div>
-                                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Estado Sistema</p>
-                                        <div className="flex items-center gap-2 mt-2">
-                                            <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                                            <p className="text-2xl font-black text-green-600 uppercase tracking-tighter">Sincronizado</p>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="bg-white rounded-[3rem] shadow-2xl overflow-hidden border border-slate-100">
-                                    <div className="p-10 border-b border-slate-50 bg-slate-50/30 flex justify-between items-center">
-                                        <h3 className="font-black text-slate-800 uppercase tracking-widest text-xs">Bitácora de Operaciones</h3>
-                                        <span className="bg-blue-100 text-blue-700 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest">Tiempo Real</span>
-                                    </div>
-                                    <div className="overflow-x-auto no-scrollbar">
-                                        <table className="w-full text-left">
-                                            <thead className="bg-slate-50/80 text-[10px] uppercase font-black text-slate-400 tracking-widest border-b border-slate-100">
-                                                <tr>
-                                                    <th className="px-10 py-6">Timestamp</th>
-                                                    <th className="px-10 py-6">Operación</th>
-                                                    <th className="px-10 py-6">Detalle / Cliente</th>
-                                                    <th className="px-10 py-6 text-right">Monto</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody className="divide-y divide-slate-50">
-                                                {records.length === 0 ? (
-                                                    <tr>
-                                                        <td colSpan="4" className="px-10 py-24 text-center">
-                                                            <div className="flex flex-col items-center text-slate-300">
-                                                                <Icon name="droplets" size={48} className="mb-4 opacity-20" />
-                                                                <p className="font-bold italic">Esperando primeros registros...</p>
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                ) : (
-                                                    records.map(r => (
-                                                        <tr key={r.id} className="hover:bg-blue-50/30 transition group cursor-default">
-                                                            <td className="px-10 py-8">
-                                                                <p className="text-[10px] font-black font-mono text-slate-400 uppercase leading-none">{r.timestampStr?.split(',')[0] || 'Hoy'}</p>
-                                                                <p className="text-[11px] font-bold text-slate-300 mt-1">{r.timestampStr?.split(',')[1] || '--:--'}</p>
-                                                            </td>
-                                                            <td className="px-10 py-8">
-                                                                <span className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest ${r.type === 'venta' ? 'bg-blue-100 text-blue-600' : 'bg-purple-100 text-purple-600'}`}>
-                                                                    {r.type}
-                                                                </span>
-                                                            </td>
-                                                            <td className="px-10 py-8">
-                                                                <p className="font-black text-slate-800 tracking-tight text-lg">{r.customer || 'Control Técnico'}</p>
-                                                                <div className="flex items-center gap-2 mt-1">
-                                                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{r.category || 'Monitoreo'}</p>
-                                                                    <span className="text-slate-200 text-xs">•</span>
-                                                                    <p className="text-[10px] text-blue-400 font-bold uppercase tracking-widest">{r.createdBy || 'Sistema'}</p>
-                                                                </div>
-                                                            </td>
-                                                            <td className="px-10 py-8 text-right">
-                                                                <span className="font-black text-slate-900 text-2xl tracking-tighter">
-                                                                    {r.type === 'venta' ? `$${Number(r.amount || 0).toFixed(2)}` : '-'}
-                                                                </span>
-                                                            </td>
-                                                        </tr>
-                                                    ))
-                                                )}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-                    </main>
                 </div>
-            );
-        };
+            </div>
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
+            <!-- Dashboard -->
+            <div class="grid grid-cols-3 gap-3">
+                <div class="bg-white p-4 rounded-2xl border border-gray-100 text-center">
+                    <p class="text-[10px] text-gray-400 font-bold uppercase">Pres.</p>
+                    <p class="text-lg font-bold text-green-600" id="count-present">0</p>
+                </div>
+                <div class="bg-white p-4 rounded-2xl border border-gray-100 text-center">
+                    <p class="text-[10px] text-gray-400 font-bold uppercase">Faltas</p>
+                    <p class="text-lg font-bold text-red-600" id="count-absent">0</p>
+                </div>
+                <div class="bg-white p-4 rounded-2xl border border-gray-100 text-center">
+                    <p class="text-[10px] text-gray-400 font-bold uppercase">Just.</p>
+                    <p class="text-lg font-bold text-orange-500" id="count-justified">0</p>
+                </div>
+            </div>
+
+            <div class="text-center pt-8">
+                <button onclick="clearAllData()" class="text-[10px] text-red-300 uppercase font-bold tracking-widest">
+                    Reiniciar Base de Datos
+                </button>
+            </div>
+        </section>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-gray-900 text-white px-6 py-3 rounded-full shadow-2xl opacity-0 transition-all duration-300 pointer-events-none text-sm z-50">
+        Mensaje
+    </div>
+
+    <script>
+        // --- LÓGICA PWA ---
+        const manifest = {
+            "name": "Athlete Tracker Pro",
+            "short_name": "AthleteApp",
+            "start_url": ".",
+            "display": "standalone",
+            "background_color": "#f3f4f6",
+            "theme_color": "#2563eb",
+            "icons": [
+                {
+                    "src": "https://cdn-icons-png.flaticon.com/512/857/857681.png",
+                    "sizes": "512x512",
+                    "type": "image/png",
+                    "purpose": "any maskable"
+                }
+            ]
+        };
+        document.getElementById('pwa-manifest').setAttribute('href', 'data:application/json;base64,' + btoa(JSON.stringify(manifest)));
+
+        // Registro de Service Worker para Offline
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                const swCode = `
+                    const CACHE_NAME = 'athlete-v1';
+                    self.addEventListener('install', e => {
+                        e.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(['./'])));
+                    });
+                    self.addEventListener('fetch', e => {
+                        e.respondWith(caches.match(e.request).then(res => res || fetch(e.request)));
+                    });
+                `;
+                const blob = new Blob([swCode], { type: 'text/javascript' });
+                const swUrl = URL.createObjectURL(blob);
+                navigator.serviceWorker.register(swUrl).catch(err => console.log("SW Error", err));
+            });
+        }
+
+        // Manejo de botón de instalación
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            document.getElementById('install-button').classList.remove('hidden');
+        });
+
+        document.getElementById('install-button').addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') {
+                    document.getElementById('install-button').classList.add('hidden');
+                }
+                deferredPrompt = null;
+            }
+        });
+
+        // --- LÓGICA DE LA APLICACIÓN ---
+        const LS_KEY_ATHLETES = 'atp_pwa_athletes';
+        const LS_KEY_SESSIONS = 'atp_pwa_sessions';
+        let athletes = [];
+        let sessionState = {};
+
+        function init() {
+            document.getElementById('session-date').value = new Date().toISOString().split('T')[0];
+            const saved = localStorage.getItem(LS_KEY_ATHLETES);
+            if (saved) athletes = JSON.parse(saved);
+            renderAll();
+        }
+
+        function renderAll() {
+            const grid = document.getElementById('athlete-grid');
+            const empty = document.getElementById('empty-state');
+            grid.innerHTML = '';
+            
+            if (athletes.length === 0) {
+                empty.classList.remove('hidden');
+            } else {
+                empty.classList.add('hidden');
+                athletes.forEach(athlete => {
+                    if (!sessionState[athlete.id]) sessionState[athlete.id] = { status: 'present', progress: 100 };
+                    grid.innerHTML += createRow(athlete);
+                    setTimeout(() => applyStatusVisual(athlete.id, sessionState[athlete.id].status), 0);
+                });
+            }
+            updateStats();
+        }
+
+        function createRow(athlete) {
+            const st = sessionState[athlete.id];
+            return `
+                <tr class="border-b border-gray-50" id="row-${athlete.id}">
+                    <td class="p-4">
+                        <p class="font-bold text-gray-800 text-sm truncate">${athlete.name}</p>
+                    </td>
+                    <td class="p-4 text-center">
+                        <div class="flex justify-center gap-1">
+                            <button onclick="setStatus(${athlete.id}, 'present')" id="btn-p-${athlete.id}" class="status-pill w-8 h-8 rounded-lg text-[10px] font-bold border border-gray-200 text-gray-400">P</button>
+                            <button onclick="setStatus(${athlete.id}, 'absent')" id="btn-a-${athlete.id}" class="status-pill w-8 h-8 rounded-lg text-[10px] font-bold border border-gray-200 text-gray-400">F</button>
+                            <button onclick="setStatus(${athlete.id}, 'justified')" id="btn-j-${athlete.id}" class="status-pill w-8 h-8 rounded-lg text-[10px] font-bold border border-gray-200 text-gray-400">J</button>
+                        </div>
+                    </td>
+                    <td class="p-4">
+                        <div class="flex flex-col gap-1 max-w-[120px] mx-auto">
+                            <input type="range" id="range-${athlete.id}" min="0" max="100" value="${st.progress}" 
+                                   class="w-full h-1 bg-gray-100 rounded-lg appearance-none cursor-pointer"
+                                   oninput="updateProgress(${athlete.id}, this.value)">
+                            <div class="w-full bg-gray-50 h-1 rounded-full overflow-hidden">
+                                <div id="bar-${athlete.id}" class="progress-bar bg-blue-600 h-full" style="width: ${st.progress}%"></div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="p-4 text-right">
+                        <button onclick="removeAthlete(${athlete.id})" class="text-gray-300 hover:text-red-500 font-bold px-2">×</button>
+                    </td>
+                </tr>
+            `;
+        }
+
+        function addAthlete() {
+            const name = document.getElementById('new-athlete-name');
+            if (!name.value.trim()) return showToast("Escribe un nombre", "bg-red-500");
+            athletes.unshift({ id: Date.now(), name: name.value.trim() });
+            localStorage.setItem(LS_KEY_ATHLETES, JSON.stringify(athletes));
+            name.value = '';
+            renderAll();
+            showToast("Atleta registrado");
+        }
+
+        function removeAthlete(id) {
+            if(confirm("¿Eliminar de la lista?")) {
+                athletes = athletes.filter(a => a.id !== id);
+                delete sessionState[id];
+                localStorage.setItem(LS_KEY_ATHLETES, JSON.stringify(athletes));
+                renderAll();
+            }
+        }
+
+        function setStatus(id, status) {
+            sessionState[id].status = status;
+            applyStatusVisual(id, status);
+            const range = document.getElementById(`range-${id}`);
+            if (status !== 'present') {
+                updateProgress(id, 0);
+                range.disabled = true;
+                range.style.opacity = "0.3";
+            } else {
+                updateProgress(id, 100);
+                range.disabled = false;
+                range.style.opacity = "1";
+            }
+            updateStats();
+        }
+
+        function applyStatusVisual(id, status) {
+            const btns = {
+                p: document.getElementById(`btn-p-${id}`),
+                a: document.getElementById(`btn-a-${id}`),
+                j: document.getElementById(`btn-j-${id}`)
+            };
+            if (!btns.p) return;
+            const base = "status-pill w-8 h-8 rounded-lg text-[10px] font-bold border border-gray-200 text-gray-400";
+            btns.p.className = base; btns.a.className = base; btns.j.className = base;
+            if (status === 'present') btns.p.className = base.replace('text-gray-400', 'bg-green-600 border-green-600 text-white shadow-md');
+            if (status === 'absent') btns.a.className = base.replace('text-gray-400', 'bg-red-600 border-red-600 text-white shadow-md');
+            if (status === 'justified') btns.j.className = base.replace('text-gray-400', 'bg-orange-500 border-orange-500 text-white shadow-md');
+        }
+
+        function updateProgress(id, val) {
+            sessionState[id].progress = val;
+            const bar = document.getElementById(`bar-${id}`);
+            if (bar) bar.style.width = val + '%';
+        }
+
+        function updateStats() {
+            let p = 0, a = 0, j = 0;
+            Object.values(sessionState).forEach(s => {
+                if (s.status === 'present') p++;
+                if (s.status === 'absent') a++;
+                if (s.status === 'justified') j++;
+            });
+            document.getElementById('count-present').innerText = p;
+            document.getElementById('count-absent').innerText = a;
+            document.getElementById('count-justified').innerText = j;
+        }
+
+        function saveSession() {
+            const history = JSON.parse(localStorage.getItem(LS_KEY_SESSIONS) || '[]');
+            history.push({ date: document.getElementById('session-date').value, data: sessionState });
+            localStorage.setItem(LS_KEY_SESSIONS, JSON.stringify(history));
+            showToast("Sesión guardada en el dispositivo", "bg-green-600");
+        }
+
+        function showToast(msg, color = "bg-gray-900") {
+            const t = document.getElementById('toast');
+            t.innerText = msg;
+            t.className = `fixed bottom-6 left-1/2 -translate-x-1/2 ${color} text-white px-6 py-3 rounded-full shadow-2xl opacity-100 transition-all duration-300 text-sm z-50`;
+            setTimeout(() => t.classList.replace('opacity-100', 'opacity-0'), 2500);
+        }
+
+        function clearAllData() {
+            if (confirm("¿Borrar todo el historial y atletas?")) {
+                localStorage.clear();
+                location.reload();
+            }
+        }
+
+        window.onload = init;
     </script>
 </body>
 </html>
