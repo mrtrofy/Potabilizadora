@@ -13,7 +13,7 @@
     <meta name="apple-mobile-web-app-title" content="SportTracker">
     
     <!-- Web Manifest for PWA -->
-    <link rel="manifest" href="data:application/manifest+json;base64,ewogICJuYW1lIjogIlNwb3J0IFRyYWNrZXIgQVBQIiwKICAic2hvcnRfbmFtZSI6ICJTcG9ydFRyYWNrZXIiLAogICJzdGFydF91cmwiOiAiLiIsCiAgImRpc3BsYXkiOiAic3RhbmRhbG9uZSIsCiAgImJhY2tncm91bmRfY29sb3IiOiAiI2Y5ZmFmYiIsCiAgInRoZW1lX2NvbG9yIjogIiMxZjI5MzciLAogICJpY29ucyI6IFsKICAgIHsKICAgICAgInNyYyI6ICJodHRwczovL2Nkbi1pY29ucy1wbmcuZnJlZXBpay5jb20vNTEyLzI1ODkvMjU4OTExMi5wbmciLAogICAgICAic2l6ZXMiOiAiNTEyeDUxMiIsCiAgICAgICJ0eXBlIjogImltYWdlL3BuZyIKICAgIH0KICBdCn0=">
+    <link rel="manifest" href="data:application/manifest+json;base64,ewogICJuYW1lIjogIlNwb3J0IFRyYWNrZXIgQVBQIiwKICAic2hvcnRfbmFtZSI6ICJTcG9ydFRyYWNrZXIiLAogICJzdGFydF91cmwiOiAiLiIsCiAgImRpc3BsYXkiOiAic3RhbmRhbG9uZSIsCiAgImJhY2tncm91bmRfY29sb3IiOiAiI2Y5ZmFmYiIsCiAgInRoZW1lX2NvbG9yIjogIiMxZjI5MzciLAogICpkaWNvbnMiOiBbCiAgICB7CiAgICAgICJzcmMiOiAiaHR0cHM6Ly9jZG4taWNvbnMtcG5nLmZyZWVwaWsuY29tLzUxMi8yNTg5LzI1ODkxMTIucG5nIiwKICAgICAgInNpemVzIjogIjUxMng1MTIiLAogICAgICAidHlwZSI6ICJpbWFnZS9wbmciCiAgICB9CiAgXQp9">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
@@ -25,18 +25,25 @@
             -webkit-tap-highlight-color: transparent;
             overscroll-behavior-y: contain;
         }
-        .status-pill { transition: all 0.2s ease; }
+        .status-pill { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
         
         input[type="range"]::-webkit-slider-thumb {
             -webkit-appearance: none;
             appearance: none;
-            width: 18px;
-            height: 18px;
+            width: 20px;
+            height: 20px;
             background: #374151;
             cursor: pointer;
             border-radius: 50%;
             border: 2px solid white;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        /* Bloqueo visual cuando no es admin */
+        body:not(.is-admin) .admin-only-input {
+            pointer-events: none;
+            opacity: 0.5;
+            filter: grayscale(0.8);
         }
         
         .active-tab {
@@ -57,20 +64,26 @@
         body.is-admin .admin-only-table-cell { display: table-cell !important; }
         .admin-only-table-cell { display: none; }
 
-        /* Custom Colors */
-        .btn-green { background-color: #10b981; }
-        .btn-red { background-color: #ef4444; }
         .bg-dark-gray { background-color: #1f2937; }
+
+        /* Estilos de botones de estado coloreados */
+        .btn-status-p { border-color: #22c55e; color: #22c55e; }
+        .btn-status-p.active { background-color: #22c55e; color: white; box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3); }
+        
+        .btn-status-f { border-color: #ef4444; color: #ef4444; }
+        .btn-status-f.active { background-color: #ef4444; color: white; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3); }
+        
+        .btn-status-j { border-color: #f59e0b; color: #f59e0b; }
+        .btn-status-j.active { background-color: #f59e0b; color: white; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3); }
     </style>
 </head>
 <body class="p-3 sm:p-6 md:p-8 pb-24">
 
     <div class="max-w-5xl mx-auto">
-        <!-- Header Principal con Logo -->
+        <!-- Header Principal -->
         <header class="flex justify-between items-center mb-6 bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
             <div class="flex items-center gap-3">
                 <div class="bg-dark-gray p-2 rounded-xl text-white">
-                    <!-- Logo Deportivo: Atleta Corriendo -->
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M13 4a1 1 0 1 0 2 0 1 1 0 1 0-2 0"></path>
                         <path d="M4 13h1l3-1 2-5"></path>
@@ -111,17 +124,18 @@
         <!-- VISTA PRINCIPAL -->
         <main id="view-main" class="view-section active space-y-6">
             
-            <!-- PANEL ADMIN -->
+            <!-- PANEL ADMIN GLOBAL -->
             <section class="admin-only">
                 <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden mb-6">
-                    <div class="bg-dark-gray px-4 py-2">
-                        <p class="text-[10px] font-bold text-white uppercase tracking-widest">Gestión de Atletas (Admin)</p>
+                    <div class="bg-dark-gray px-4 py-2 flex justify-between items-center">
+                        <p class="text-[10px] font-bold text-white uppercase tracking-widest">Base de Datos de Atletas (Global)</p>
+                        <span class="text-[8px] text-gray-400 uppercase font-bold">Modo Edición Activado</span>
                     </div>
                     <div class="p-4 grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div class="space-y-2">
-                            <label class="text-[10px] font-bold text-gray-400 uppercase">Añadir Atleta</label>
+                            <label class="text-[10px] font-bold text-gray-400 uppercase">Registrar Nuevo Atleta</label>
                             <div class="flex gap-2">
-                                <input type="text" id="new-athlete-name" placeholder="Nombre..." 
+                                <input type="text" id="new-athlete-name" placeholder="Nombre completo..." 
                                        class="flex-grow bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm outline-none focus:ring-2 focus:ring-gray-300">
                                 <button onclick="addAthlete()" class="bg-dark-gray text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-md active:scale-95 transition-transform">
                                     Registrar
@@ -129,7 +143,7 @@
                             </div>
                         </div>
                         <div class="space-y-2">
-                            <label class="text-[10px] font-bold text-gray-400 uppercase">Fecha de Sesión</label>
+                            <label class="text-[10px] font-bold text-gray-400 uppercase">Fecha de la Sesión Actual</label>
                             <input type="date" id="admin-session-date" onchange="updateTableDate()" 
                                    class="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-sm outline-none focus:ring-2 focus:ring-gray-300">
                         </div>
@@ -154,12 +168,13 @@
                             <tbody id="athlete-grid"></tbody>
                         </table>
                         <div id="empty-state" class="hidden py-20 text-center text-gray-400 text-sm">
-                            <p class="font-medium">No hay atletas registrados en <span class="sport-label font-bold"></span>.</p>
+                            <p class="font-medium italic">No hay atletas registrados.</p>
+                            <p class="text-[10px] mt-1 uppercase font-bold text-gray-300">Usa el panel admin para añadir deportistas.</p>
                         </div>
                     </div>
                 </div>
 
-                <!-- Footer de Acción Estilo PWA -->
+                <!-- Footer de Acción -->
                 <div class="flex flex-col sm:flex-row items-center justify-between gap-4 bg-dark-gray p-5 rounded-2xl shadow-xl">
                     <div class="flex gap-8">
                         <div class="flex flex-col">
@@ -171,7 +186,7 @@
                             <span class="text-2xl font-black text-red-400 leading-none" id="count-absent">0</span>
                         </div>
                     </div>
-                    <button onclick="saveSession()" class="w-full sm:w-auto bg-green-500 hover:bg-green-600 text-white px-12 py-4 rounded-2xl font-black text-sm transition-all active:scale-95 shadow-lg shadow-green-900/40 uppercase tracking-widest">
+                    <button onclick="saveSession()" class="admin-only-input w-full sm:w-auto bg-green-500 hover:bg-green-600 text-white px-12 py-4 rounded-2xl font-black text-sm transition-all active:scale-95 shadow-lg shadow-green-900/40 uppercase tracking-widest">
                         Guardar Sesión
                     </button>
                 </div>
@@ -181,7 +196,7 @@
         <!-- VISTA DE ESTADÍSTICAS -->
         <main id="view-stats" class="view-section space-y-6">
             <div class="flex items-center justify-between bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
-                <h2 class="font-bold text-gray-700">Progreso Histórico</h2>
+                <h2 class="font-bold text-gray-700">Progreso Histórico: <span class="sport-label"></span></h2>
                 <select id="stats-period" onchange="renderStats()" class="bg-gray-50 text-[10px] font-bold p-2 rounded-lg outline-none border border-gray-200 uppercase">
                     <option value="7">Últimos 7 días</option>
                     <option value="30">Últimos 30 días</option>
@@ -193,8 +208,8 @@
 
         <!-- Zona de Peligro -->
         <div class="text-center pt-10 pb-8 admin-only">
-            <button onclick="clearSportData()" class="text-[10px] text-red-400 hover:text-red-600 uppercase font-bold tracking-widest transition-all px-4 py-2 hover:bg-red-50 rounded-lg">
-                Borrar todos los datos de esta disciplina
+            <button onclick="clearSystem()" class="text-[10px] text-red-400 hover:text-red-600 uppercase font-bold tracking-widest transition-all px-4 py-2 hover:bg-red-50 rounded-lg">
+                Borrar sistema completo
             </button>
         </div>
     </div>
@@ -211,7 +226,7 @@
                 </svg>
             </div>
             <h3 class="text-center font-black text-gray-800 mb-6 uppercase tracking-widest text-sm">PIN de Acceso</h3>
-            <input type="password" id="admin-pass-input" placeholder="••••" class="w-full bg-gray-50 border border-gray-200 rounded-2xl p-4 text-center text-3xl font-bold tracking-[0.5em] mb-6 outline-none focus:ring-2 focus:ring-gray-300">
+            <input type="password" id="admin-pass-input" placeholder="••••" class="w-full bg-gray-50 border border-gray-200 rounded-2xl p-4 text-center text-2xl font-bold mb-6 outline-none focus:ring-2 focus:ring-gray-300">
             <div class="flex flex-col gap-3">
                 <button onclick="checkPassword()" class="w-full py-4 bg-dark-gray text-white rounded-2xl text-sm font-black uppercase tracking-widest shadow-lg active:scale-95 transition-transform">Entrar</button>
                 <button onclick="closePassModal()" class="w-full py-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Cerrar</button>
@@ -221,34 +236,31 @@
 
     <script>
         const SPORTS = ["Natación", "Obstáculos", "Esgrima", "Tiro", "Preparación física", "Atletismo", "Láser Run"];
-        const ADMIN_PASSWORD = "pentatlonasis1234";
+        // Nueva contraseña solicitada
+        const ADMIN_PASSWORD = "pentatlonasis1234"; 
+
+        const LS_ATHLETES = "sportpwa_global_athletes";
+        const getHistoryKey = (sport) => `sportpwa_history_${sport.toLowerCase().replace(/\s/g, '_')}`;
         
+        let athletes = [];
         let currentSport = SPORTS[0];
         let currentView = 'main';
-        let athletes = [];
         let sessionState = {};
         let isAdmin = false;
 
-        const getLSKey = (sport) => `sportpwa_athletes_${sport.toLowerCase().replace(/\s/g, '_')}`;
-        const getHistoryKey = (sport) => `sportpwa_history_${sport.toLowerCase().replace(/\s/g, '_')}`;
-
         function init() {
-            // Set date to today
             const today = new Date().toISOString().split('T')[0];
             document.getElementById('admin-session-date').value = today;
+            
+            const savedAthletes = localStorage.getItem(LS_ATHLETES);
+            athletes = savedAthletes ? JSON.parse(savedAthletes) : [];
             
             renderTabs();
             switchSport(SPORTS[0]);
             
-            // Password input listener
             document.getElementById('admin-pass-input').addEventListener('keypress', (e) => {
                 if(e.key === 'Enter') checkPassword();
             });
-
-            // Register Service Worker for PWA (Mock)
-            if ('serviceWorker' in navigator) {
-                console.log('PWA Service Worker listo');
-            }
         }
 
         // --- AUTH ---
@@ -256,7 +268,7 @@
             if (isAdmin) {
                 isAdmin = false;
                 updateAdminUI();
-                showToast("Admin OFF");
+                showToast("Sesión cerrada");
             } else {
                 document.getElementById('password-modal').classList.remove('hidden');
                 document.getElementById('admin-pass-input').focus();
@@ -268,9 +280,9 @@
                 isAdmin = true;
                 updateAdminUI();
                 closePassModal();
-                showToast("Admin Activo", "bg-green-600");
+                showToast("Acceso Autorizado", "bg-green-600");
             } else {
-                showToast("Pin Incorrecto", "bg-red-500");
+                showToast("Contraseña Incorrecta", "bg-red-500");
                 document.getElementById('admin-pass-input').value = '';
             }
         }
@@ -301,10 +313,7 @@
             document.getElementById('current-sport-title').innerText = name;
             document.querySelectorAll('.sport-label').forEach(el => el.innerText = name);
             
-            const saved = localStorage.getItem(getLSKey(currentSport));
-            athletes = saved ? JSON.parse(saved) : [];
-            sessionState = {};
-            
+            sessionState = {}; 
             if(currentView === 'main') renderAll();
             else renderStats();
         }
@@ -329,7 +338,10 @@
             } else {
                 empty.classList.add('hidden');
                 athletes.forEach(athlete => {
-                    if (!sessionState[athlete.id]) sessionState[athlete.id] = { status: 'present', progress: 100 };
+                    if (!sessionState[athlete.id]) {
+                        sessionState[athlete.id] = { status: 'present', progress: 100 };
+                    }
+                    
                     grid.innerHTML += `
                         <tr class="border-b border-gray-50 group transition-colors">
                             <td class="p-4">
@@ -339,22 +351,22 @@
                                 <p class="font-bold text-gray-700 text-sm">${athlete.name}</p>
                             </td>
                             <td class="p-4 text-center">
-                                <div class="flex justify-center gap-1.5">
-                                    <button onclick="setStatus(${athlete.id}, 'present')" id="btn-p-${athlete.id}" class="status-pill w-8 h-8 rounded-lg text-[10px] font-black border border-gray-200 text-gray-300">P</button>
-                                    <button onclick="setStatus(${athlete.id}, 'absent')" id="btn-a-${athlete.id}" class="status-pill w-8 h-8 rounded-lg text-[10px] font-black border border-gray-200 text-gray-300">F</button>
-                                    <button onclick="setStatus(${athlete.id}, 'justified')" id="btn-j-${athlete.id}" class="status-pill w-8 h-8 rounded-lg text-[10px] font-black border border-gray-200 text-gray-300">J</button>
+                                <div class="flex justify-center gap-2 admin-only-input">
+                                    <button onclick="setStatus(${athlete.id}, 'present')" id="btn-p-${athlete.id}" class="status-pill btn-status-p w-10 h-10 rounded-xl text-[12px] font-black border-2">P</button>
+                                    <button onclick="setStatus(${athlete.id}, 'absent')" id="btn-a-${athlete.id}" class="status-pill btn-status-f w-10 h-10 rounded-xl text-[12px] font-black border-2">F</button>
+                                    <button onclick="setStatus(${athlete.id}, 'justified')" id="btn-j-${athlete.id}" class="status-pill btn-status-j w-10 h-10 rounded-xl text-[12px] font-black border-2">J</button>
                                 </div>
                             </td>
                             <td class="p-4">
-                                <div class="flex flex-col gap-1 max-w-[130px] mx-auto">
+                                <div class="flex flex-col gap-2 max-w-[150px] mx-auto admin-only-input">
                                     <input type="range" min="0" max="100" value="${sessionState[athlete.id].progress}" 
-                                           class="w-full h-1 bg-gray-200 rounded-full appearance-none cursor-pointer"
+                                           class="w-full h-1.5 bg-gray-200 rounded-full appearance-none cursor-pointer"
                                            oninput="updateProgress(${athlete.id}, this.value)">
                                     <div class="flex justify-between items-center">
-                                        <div class="w-full bg-gray-100 h-1 rounded-full overflow-hidden mr-2">
+                                        <div class="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden mr-2">
                                             <div id="bar-${athlete.id}" class="bg-gray-600 h-full transition-all" style="width: ${sessionState[athlete.id].progress}%"></div>
                                         </div>
-                                        <span class="text-[9px] font-black text-gray-500">${sessionState[athlete.id].progress}%</span>
+                                        <span class="text-[10px] font-black text-gray-500 min-w-[30px] text-right">${sessionState[athlete.id].progress}%</span>
                                     </div>
                                 </div>
                             </td>
@@ -370,7 +382,7 @@
                     setTimeout(() => applyStatusVisual(athlete.id, sessionState[athlete.id].status), 0);
                 });
             }
-            updateStats();
+            updateCounts();
         }
 
         function formatDate(val) {
@@ -379,28 +391,25 @@
         }
 
         function setStatus(id, status) {
+            if (!isAdmin || !sessionState[id]) return;
             sessionState[id].status = status;
             applyStatusVisual(id, status);
             if (status !== 'present') updateProgress(id, 0);
-            else updateProgress(id, 100);
-            updateStats();
+            else if (sessionState[id].progress === 0) updateProgress(id, 100);
+            updateCounts();
         }
 
         function applyStatusVisual(id, status) {
-            const b = "status-pill w-8 h-8 rounded-lg text-[10px] font-black border border-gray-100 text-gray-300";
             ['p', 'a', 'j'].forEach(k => {
                 const el = document.getElementById(`btn-${k}-${id}`);
-                if (el) el.className = b;
+                if (el) el.classList.remove('active');
             });
             const active = document.getElementById(`btn-${status[0]}-${id}`);
-            if(!active) return;
-            if(status === 'present') active.className = b.replace('text-gray-300', 'bg-green-500 border-green-500 text-white shadow-md');
-            if(status === 'absent') active.className = b.replace('text-gray-300', 'bg-red-500 border-red-500 text-white shadow-md');
-            if(status === 'justified') active.className = b.replace('text-gray-300', 'bg-orange-400 border-orange-400 text-white shadow-md');
+            if(active) active.classList.add('active');
         }
 
         function updateProgress(id, val) {
-            if (!sessionState[id]) return;
+            if (!isAdmin || !sessionState[id]) return;
             sessionState[id].progress = val;
             const bar = document.getElementById(`bar-${id}`);
             if(bar) {
@@ -410,25 +419,29 @@
         }
 
         function addAthlete() {
+            if (!isAdmin) return;
             const input = document.getElementById('new-athlete-name');
             const name = input.value.trim();
-            if(!name) return showToast("Nombre vacío", "bg-red-500");
+            if(!name) return showToast("Nombre requerido", "bg-red-500");
+            
             athletes.push({ id: Date.now(), name });
-            localStorage.setItem(getLSKey(currentSport), JSON.stringify(athletes));
+            localStorage.setItem(LS_ATHLETES, JSON.stringify(athletes));
             input.value = '';
             renderAll();
             showToast("Atleta registrado");
         }
 
         function removeAthlete(id) {
-            if(confirm("¿Eliminar atleta?")) {
+            if (!isAdmin) return;
+            if(confirm("¿Eliminar este atleta permanentemente?")) {
                 athletes = athletes.filter(a => a.id !== id);
-                localStorage.setItem(getLSKey(currentSport), JSON.stringify(athletes));
+                localStorage.setItem(LS_ATHLETES, JSON.stringify(athletes));
                 renderAll();
+                showToast("Atleta eliminado", "bg-red-500");
             }
         }
 
-        function updateStats() {
+        function updateCounts() {
             let p = 0, a = 0;
             Object.values(sessionState).forEach(s => {
                 if(s.status === 'present') p++;
@@ -439,16 +452,23 @@
         }
 
         function saveSession() {
+            if (!isAdmin) return showToast("Modo Admin requerido", "bg-red-500");
             const history = JSON.parse(localStorage.getItem(getHistoryKey(currentSport)) || '[]');
             const date = document.getElementById('admin-session-date').value;
-            const entry = { date, data: JSON.parse(JSON.stringify(sessionState)) };
             
+            const currentIds = athletes.map(a => a.id);
+            const filteredData = {};
+            currentIds.forEach(id => {
+                if (sessionState[id]) filteredData[id] = sessionState[id];
+            });
+
+            const entry = { date, data: filteredData };
             const existing = history.findIndex(h => h.date === date);
             if(existing > -1) history[existing] = entry;
             else history.push(entry);
             
             localStorage.setItem(getHistoryKey(currentSport), JSON.stringify(history));
-            showToast("Registro guardado con éxito", "bg-green-600");
+            showToast(`Datos guardados`, "bg-green-600");
         }
 
         function renderStats() {
@@ -464,15 +484,17 @@
             empty.classList.add('hidden');
             container.innerHTML = athletes.map(a => {
                 const logs = history.filter(h => h.data[a.id]);
-                const present = logs.filter(h => h.data[a.id].status === 'present');
-                const avg = present.length ? Math.round(present.reduce((acc, h) => acc + parseInt(h.data[a.id].progress), 0) / present.length) : 0;
+                const present = logs.filter(h => h.data[a.id]?.status === 'present');
+                const totalPresent = present.length;
+                const avg = totalPresent ? Math.round(present.reduce((acc, h) => acc + parseInt(h.data[a.id].progress), 0) / totalPresent) : 0;
+                
                 return `
                     <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between">
                         <div class="flex items-center gap-4">
                             <div class="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center font-black text-gray-300 text-xs">${a.name.charAt(0)}</div>
                             <div>
                                 <p class="font-bold text-gray-800 text-sm">${a.name}</p>
-                                <p class="text-[9px] text-gray-400 uppercase font-black">${present.length} sesiones de hoy</p>
+                                <p class="text-[9px] text-gray-400 uppercase font-black">${totalPresent} asistencias</p>
                             </div>
                         </div>
                         <div class="text-right">
@@ -506,13 +528,14 @@
             }
         }
 
-        function clearSportData() {
-            if(confirm("¿RESET de datos? Esta acción no se puede deshacer.")) {
-                localStorage.removeItem(getHistoryKey(currentSport));
-                localStorage.removeItem(getLSKey(currentSport));
+        function clearSystem() {
+            if(!isAdmin) return;
+            if(confirm("¿Estás seguro de que quieres BORRAR TODO el sistema?")) {
+                localStorage.clear();
                 athletes = [];
+                sessionState = {};
                 renderAll();
-                showToast("Datos reseteados", "bg-red-500");
+                showToast("Memoria limpiada", "bg-red-500");
             }
         }
 
@@ -520,7 +543,7 @@
             const t = document.getElementById('toast');
             t.innerText = msg;
             t.className = `fixed bottom-24 left-1/2 -translate-x-1/2 ${color} text-white px-8 py-3.5 rounded-2xl shadow-2xl opacity-100 transition-all duration-300 text-[10px] font-bold z-50 uppercase tracking-widest text-center min-w-[200px]`;
-            setTimeout(() => t.style.opacity = '0', 2000);
+            setTimeout(() => t.style.opacity = '0', 2500);
         }
 
         function updateTableDate() {
